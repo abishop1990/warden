@@ -242,9 +242,12 @@ FOR EACH PR:
   4. FOR EACH TIER (Critical → High → Medium → Low):
        a. Apply fixes
        b. Source artifact: source .warden-validation-commands.sh
-       c. Validate: $BUILD_CMD → $LINT_CMD → $FORMAT_CMD → $TEST_CMD
+       c. Validate (ABSOLUTE BLOCKING - Gap #16 fix):
+          - Build → Lint → Format → Tests
+          - ALL must pass (tests = 100% pass rate)
+          - set -euo pipefail (no bypassing)
        d. If pass: Commit → Push
-       e. If fail: Rollback, skip tier
+       e. If fail: BLOCK, Rollback, skip tier (NO partial pushes)
   5. Cleanup workspace
   6. Next PR
 ```
@@ -255,35 +258,104 @@ FOR EACH PR:
 
 See [CONFIGURATION.md](CONFIGURATION.md) for workspace configuration details.
 
-**Validation sequence** (MUST source artifact first):
+**Validation sequence** (ABSOLUTE BLOCKING - Gap #16 fix):
 ```bash
+#!/bin/bash
+set -euo pipefail  # Exit on ANY error - no bypassing
+
+echo "=== Phase 5: Pre-Push Validation (ABSOLUTE BLOCKING) ==="
+echo ""
+echo "HARD RULE: Tests must pass 100% before ANY push"
+echo ""
+
 # MANDATORY: Source validation commands from Phase 0 artifact
 source "$WORKSPACE/.warden-validation-commands.sh"
 
-# Execute discovered commands
-$BUILD_CMD  || { rollback; exit 1; }
-$LINT_CMD   || { rollback; exit 1; }
-$FORMAT_CMD  # auto-fix, ignore errors
-$TEST_CMD   || { rollback; exit 1; }
+# Track validation failures
+VALIDATION_FAILED=false
+
+# 1. BUILD (BLOCKING)
+echo "[1/4] Running build..."
+if ! eval "$BUILD_CMD"; then
+  echo "❌ BUILD FAILED - CANNOT PUSH"
+  VALIDATION_FAILED=true
+else
+  echo "✅ Build passed"
+fi
+
+# 2. LINT (BLOCKING)
+echo "[2/4] Running lint..."
+if ! eval "$LINT_CMD"; then
+  echo "❌ LINT FAILED - CANNOT PUSH"
+  VALIDATION_FAILED=true
+else
+  echo "✅ Lint passed"
+fi
+
+# 3. FORMAT (AUTO-FIX)
+echo "[3/4] Running format..."
+eval "$FORMAT_CMD" || true
+
+# 4. TESTS (ABSOLUTE BLOCKING)
+echo "[4/4] Running tests..."
+if ! eval "$TEST_CMD"; then
+  echo ""
+  echo "❌❌❌ TESTS FAILED ❌❌❌"
+  echo ""
+  echo "DIAGNOSTIC PUSH BLOCKED (Gap #16 enforcement)"
+  echo "Cannot push code with failing tests"
+  echo ""
+  echo "This prevents pushing partial fixes while debugging"
+  echo "Tests must pass 100% before ANY push"
+  echo ""
+  VALIDATION_FAILED=true
+else
+  echo "✅ Tests passed"
+fi
+
+# ABSOLUTE BLOCKING CHECK
+if [ "$VALIDATION_FAILED" = true ]; then
+  echo ""
+  echo "=========================================="
+  echo "  VALIDATION FAILED - CANNOT PUSH"
+  echo "=========================================="
+  echo ""
+  git reset --hard HEAD  # Rollback
+  echo "Changes rolled back"
+  echo ""
+  echo "Fix the failures and try again"
+  echo "See docs/DIAGNOSTIC-PUSH-PREVENTION.md"
+  echo ""
+  exit 1
+fi
 
 # PRE-COMMIT VERIFICATION (MANDATORY)
 git add .
-git status --short  # Show what will be committed
+git status --short
 
 # Check for unintended files
-UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.|debug_.*\.|\.debug$)')
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.|debug_.*\.|\.debug$)' || true)
 if [ -n "$UNINTENDED" ]; then
-  echo "❌ ERROR: Unintended files detected"
+  echo "❌ ERROR: Unintended debug files detected"
+  echo "$UNINTENDED"
   git reset --hard HEAD
   exit 1
 fi
 
-# Only commit/push if verification passed
+# Only commit/push if ALL validations passed
+echo ""
+echo "✅ ALL VALIDATIONS PASSED - Safe to push"
 git commit -m "Fix: ${TIER}"
 git push origin $(git branch --show-current)
 ```
 
-**Enforcement**: Phase 5 CANNOT proceed without Phase 0 artifact. See [PHASE-0-DISCOVERY.md](PHASE-0-DISCOVERY.md).
+**Enforcement**:
+- Phase 5 CANNOT proceed without Phase 0 artifact (Gap #13 fix)
+- Phase 5 CANNOT push with failing tests (Gap #16 fix - Diagnostic Push Prevention)
+- Uses `set -euo pipefail` to make bypassing impossible
+- ABSOLUTE BLOCKING - no exceptions without explicit user override
+
+See [PHASE-0-DISCOVERY.md](PHASE-0-DISCOVERY.md) and [DIAGNOSTIC-PUSH-PREVENTION.md](DIAGNOSTIC-PUSH-PREVENTION.md).
 
 **Workspace isolation**:
 - Each PR: Own temp directory

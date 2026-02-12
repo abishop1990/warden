@@ -186,8 +186,9 @@ Warden is highly configurable through natural language or parameters:
 - [PARAMETERS.md](docs/PARAMETERS.md) - Complete parameter reference (28 core + 19 advanced)
 - [EXAMPLES.md](docs/EXAMPLES.md) - Real-world usage examples
 - [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) - Validation command discovery (Gap #13 fix)
-- [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) - CI status re-checking (Gap #16 fix)
 - [REVIEW-COMMENTS.md](docs/REVIEW-COMMENTS.md) - Review comment thread fetching (Gap #15 fix)
+- [DIAGNOSTIC-PUSH-PREVENTION.md](docs/DIAGNOSTIC-PUSH-PREVENTION.md) - Blocking test failures before push (Gap #16 fix)
+- [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) - CI status re-checking (prevents stale data)
 
 ## How Warden Ensures Quality
 
@@ -198,7 +199,7 @@ Warden is highly configurable through natural language or parameters:
 - Saves to artifact: `.warden-validation-commands.sh`
 
 **Phase 4 (MANDATORY)**: Re-verifies CI status before presenting report
-- **Gap #16 fix**: Prevents stale CI data from causing wrong recommendations
+- Prevents stale CI data from causing wrong recommendations
 - Re-fetches CI status for all PRs
 - Compares with Phase 1 initial state
 - Flags PRs where CI changed (new failures or resolutions)
@@ -209,14 +210,20 @@ Warden is highly configurable through natural language or parameters:
 - Sources discovered commands from artifact
 - Runs build to ensure compilation
 - Runs linting to catch code quality issues (including formatters like gofmt, black, prettier)
-- Runs tests to ensure functionality
+- **ABSOLUTE BLOCKING**: Runs tests to ensure functionality (Gap #16 fix)
+  - Tests MUST pass 100% before ANY push
+  - No "diagnostic pushes" (pushing partial fixes while debugging)
+  - No "push to save progress" with failing tests
+  - Uses `set -euo pipefail` to prevent bypassing
 - Only commits and pushes if ALL validations pass
 
 **Enforcement**:
-- Phase 6 cannot execute without Phase 0 artifact - mechanically prevents skipping validation
-- Phase 5 (User Interaction) uses fresh CI data from Phase 4 - prevents stale recommendations
+- Phase 6 cannot execute without Phase 0 artifact (Gap #13 fix)
+- Phase 6 cannot push with failing tests (Gap #16 fix - Diagnostic Push Prevention)
+- Phase 5 (User Interaction) uses fresh CI data from Phase 4 (prevents stale recommendations)
+- ABSOLUTE BLOCKING using `set -euo pipefail` - no bypassing allowed
 
-This prevents broken CI, ensures fixes don't introduce new issues, and guarantees accurate reporting. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) and [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) for technical details.
+This prevents broken CI, ensures fixes don't introduce new issues, guarantees accurate reporting, and blocks "diagnostic push" anti-pattern. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md), [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md), and [DIAGNOSTIC-PUSH-PREVENTION.md](docs/DIAGNOSTIC-PUSH-PREVENTION.md) for technical details.
 
 ## Contributing
 

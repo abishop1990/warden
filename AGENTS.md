@@ -336,22 +336,73 @@ echo "  FORMAT: ${FORMAT_CMD:-[skip]}"
 echo "  TEST:   ${TEST_CMD:-[skip]}"
 ```
 
-**Validation sequence** (MUST run before push):
-1. Apply fixes
-2. Run `$BUILD_CMD` → exit code != 0? Rollback, abort tier
-3. Run `$LINT_CMD` → exit code != 0? Rollback, abort tier
-4. Run `$FORMAT_CMD` → auto-fix styling
-5. Run `$TEST_CMD` → exit code != 0? Rollback, abort tier
-6. **PRE-COMMIT VERIFICATION** (MANDATORY):
-   - Stage files: `git add .`
-   - Show staged files: `git status --short`
-   - Check for unintended files (debug, temp, IDE files)
-   - Verify at least one file staged
-   - Abort if unintended files detected
-7. Commit (only if verification passed)
-8. Push (only after commit)
+**Validation sequence** (ABSOLUTE BLOCKING - Gap #16 fix):
 
-See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) and [VALIDATION-ORDER.md](docs/VALIDATION-ORDER.md) for enforcement details.
+```bash
+#!/bin/bash
+set -euo pipefail  # Exit on any error - NO BYPASSING
+
+echo "=== Phase 6: Pre-Push Validation (ABSOLUTE BLOCKING) ==="
+echo "HARD RULE: Tests must pass 100% before ANY push"
+
+# 1. Apply fixes
+apply_fixes()
+
+# 2. Track validation state
+VALIDATION_FAILED=false
+
+# 3. Run validations (track failures, don't exit immediately)
+eval "$BUILD_CMD" || { echo "❌ BUILD FAILED"; VALIDATION_FAILED=true; }
+eval "$LINT_CMD" || { echo "❌ LINT FAILED"; VALIDATION_FAILED=true; }
+eval "$FORMAT_CMD" || true  # Auto-fix
+
+# 4. TESTS (ABSOLUTE BLOCKING)
+if ! eval "$TEST_CMD"; then
+  echo ""
+  echo "❌❌❌ TESTS FAILED ❌❌❌"
+  echo "DIAGNOSTIC PUSH BLOCKED (Gap #16 enforcement)"
+  echo ""
+  echo "Cannot push code with failing tests"
+  echo "This prevents 'push to save progress' while debugging"
+  echo ""
+  VALIDATION_FAILED=true
+fi
+
+# 5. ABSOLUTE BLOCKING CHECK
+if [ "$VALIDATION_FAILED" = true ]; then
+  echo "=========================================="
+  echo "  VALIDATION FAILED - CANNOT PUSH"
+  echo "=========================================="
+  git reset --hard HEAD  # Rollback
+  echo "Changes rolled back"
+  exit 1
+fi
+
+# 6. PRE-COMMIT VERIFICATION
+git add .
+git status --short
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.)' || true)
+if [ -n "$UNINTENDED" ]; then
+  echo "❌ Unintended debug files detected"
+  git reset --hard HEAD
+  exit 1
+fi
+
+# 7. Only commit/push if ALL validations passed
+echo "✅ ALL VALIDATIONS PASSED - Safe to push"
+git commit -m "Fix: ${TIER}"
+git push origin $(git branch --show-current)
+```
+
+**HARD RULE**: Tests must pass 100% before ANY push. No exceptions.
+
+**Diagnostic Push Prevention** (Gap #16):
+- If tests fail → BLOCK and rollback
+- No "push to save progress" allowed
+- No "will fix later" allowed
+- No partial fixes pushed
+
+See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md), [VALIDATION-ORDER.md](docs/VALIDATION-ORDER.md), and [DIAGNOSTIC-PUSH-PREVENTION.md](docs/DIAGNOSTIC-PUSH-PREVENTION.md).
 
 **Auto-fix** simple issues, **escalate** complex/architectural ones.
 

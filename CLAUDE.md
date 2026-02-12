@@ -255,19 +255,53 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
   source "$ARTIFACT"
   ```
 
-- **Validation sequence** (MUST run before push):
-  1. Apply fixes
-  2. Run `$BUILD_CMD` → fail? Rollback, abort tier
-  3. Run `$LINT_CMD` → fail? Rollback, abort tier
-  4. Run `$FORMAT_CMD` → auto-fix styling
-  5. Run `$TEST_CMD` → fail? Rollback, abort tier
-  6. **PRE-COMMIT VERIFICATION**:
-     - Stage: `git add .`
-     - Show: `git status --short`
-     - Check for unintended files (debug, temp, IDE)
-     - Abort if unintended files detected
-  7. Commit (only if verification passed)
-  8. Push (only after commit)
+- **Validation sequence** (ABSOLUTE BLOCKING - Gap #16 fix):
+  ```bash
+  #!/bin/bash
+  set -euo pipefail  # No bypassing allowed
+
+  # 1. Apply fixes
+  apply_fixes()
+
+  # 2. ABSOLUTE BLOCKING VALIDATION
+  VALIDATION_FAILED=false
+
+  # Build
+  eval "$BUILD_CMD" || { echo "❌ BUILD FAILED"; VALIDATION_FAILED=true; }
+
+  # Lint
+  eval "$LINT_CMD" || { echo "❌ LINT FAILED"; VALIDATION_FAILED=true; }
+
+  # Format (auto-fix)
+  eval "$FORMAT_CMD" || true
+
+  # Tests (ABSOLUTE BLOCKING)
+  if ! eval "$TEST_CMD"; then
+    echo "❌❌❌ TESTS FAILED ❌❌❌"
+    echo "DIAGNOSTIC PUSH BLOCKED (Gap #16)"
+    echo "Cannot push code with failing tests"
+    VALIDATION_FAILED=true
+  fi
+
+  # BLOCKING CHECK
+  if [ "$VALIDATION_FAILED" = true ]; then
+    git reset --hard HEAD  # Rollback
+    echo "VALIDATION FAILED - CANNOT PUSH"
+    exit 1
+  fi
+
+  # 3. PRE-COMMIT VERIFICATION
+  git add .
+  UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.)' || true)
+  [ -n "$UNINTENDED" ] && { git reset --hard HEAD; exit 1; }
+
+  # 4. Only commit/push if ALL validations passed
+  git commit -m "Fix: ${TIER}"
+  git push origin $(git branch --show-current)
+  ```
+
+  **HARD RULE**: Tests must pass 100% before ANY push. No "diagnostic pushes" allowed.
+  See [docs/DIAGNOSTIC-PUSH-PREVENTION.md](docs/DIAGNOSTIC-PUSH-PREVENTION.md)
 
 - **Complexity-based routing**:
 

@@ -374,15 +374,59 @@ Fixed ${ISSUE_COUNT} ${SEVERITY} severity issues:
 Tested: ${AFFECTED_PACKAGES}
 ```
 
-**Test and push**:
+**Validation and push** (ABSOLUTE BLOCKING - Gap #16 fix):
 ```bash
-# Test only affected packages
-git diff --name-only origin/main | xargs <language-specific-test>
+#!/bin/bash
+set -euo pipefail  # No bypassing
 
-# Push and verify
-git push origin pr-${PR_NUMBER}
+echo "=== Pre-Push Validation (ABSOLUTE BLOCKING) ==="
+echo "HARD RULE: Tests must pass 100% before ANY push"
+
+# Source validation commands from Phase 0
+source .warden-validation-commands.sh
+
+# Track failures
+VALIDATION_FAILED=false
+
+# Build
+eval "$BUILD_CMD" || { echo "❌ BUILD FAILED"; VALIDATION_FAILED=true; }
+
+# Lint
+eval "$LINT_CMD" || { echo "❌ LINT FAILED"; VALIDATION_FAILED=true; }
+
+# Format
+eval "$FORMAT_CMD" || true
+
+# Tests (ABSOLUTE BLOCKING)
+if ! eval "$TEST_CMD"; then
+  echo "❌❌❌ TESTS FAILED ❌❌❌"
+  echo "DIAGNOSTIC PUSH BLOCKED (Gap #16)"
+  echo "Cannot push code with failing tests"
+  VALIDATION_FAILED=true
+fi
+
+# BLOCKING CHECK
+if [ "$VALIDATION_FAILED" = true ]; then
+  echo "VALIDATION FAILED - CANNOT PUSH"
+  git reset --hard HEAD
+  exit 1
+fi
+
+# Pre-commit verification
+git add .
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.)' || true)
+[ -n "$UNINTENDED" ] && { git reset --hard HEAD; exit 1; }
+
+# Only push if ALL validations passed
+echo "✅ ALL VALIDATIONS PASSED"
+git commit -m "[PR #${PR_NUMBER}] Fix: ${SEVERITY} - ${DESCRIPTION}"
+git push origin $(git branch --show-current)
+
+# Monitor CI
 gh pr checks ${PR_NUMBER} --watch
 ```
+
+See [docs/DIAGNOSTIC-PUSH-PREVENTION.md](../docs/DIAGNOSTIC-PUSH-PREVENTION.md)
 
 ## Language-Specific Adaptations
 
