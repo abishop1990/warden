@@ -1,0 +1,51 @@
+{
+  "name": "warden",
+  "version": "1.2.0",
+  "displayName": "Warden - PR Review and Fix",
+  "description": "Cross-platform AI skill for comprehensive automated PR review and fixes",
+  "type": "skill",
+  "platforms": {
+    "claude-code": {
+      "instructions": "CLAUDE.md",
+      "trigger": "Run the Warden skill"
+    },
+    "github-copilot": {
+      "instructions": ".github/copilot-instructions.md",
+      "trigger": "Run the Warden skill"
+    },
+    "cursor": {
+      "instructions": ".cursorrules",
+      "trigger": "Run the Warden skill"
+    },
+    "codex": {
+      "instructions": "AGENTS.md",
+      "trigger": "Run the Warden skill"
+    }
+  },
+  "author": "abishop1990",
+  "repository": "https://github.com/abishop1990/warden",
+  "license": "MIT",
+  "keywords": [
+    "pr-review",
+    "code-quality",
+    "ci-cd",
+    "automated-fixes",
+    "security",
+    "performance",
+    "testing"
+  ],
+  "capabilities": [
+    "pr-analysis",
+    "ci-failure-detection",
+    "review-comment-analysis",
+    "code-quality-review",
+    "automated-fixes",
+    "incremental-validation"
+  ],
+  "configuration": {
+    "parameters": 59,
+    "reviewDepths": ["standard", "thorough", "comprehensive"],
+    "testStrategies": ["none", "affected", "full", "smart"],
+    "fixStrategies": ["conservative", "balanced", "aggressive"]
+  }
+}

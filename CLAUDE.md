@@ -117,10 +117,48 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 - **Input**: All findings from Phase 2 subagents
 - **Output**: Structured issue list per PR with severity, complexity, grouping
 
-**Phase 4: User Interaction**
+**Phase 4: User Interaction (MANDATORY)**
 - **Agent**: Main agent
-- **Task**: Present structured report, collect user selection
+- **Task**: Present report, get approval, WAIT for response
 - **Why**: User interaction happens in main agent
+
+**CRITICAL**: Before executing ANY fixes, you MUST:
+
+1. **Consolidate all findings** from Phase 2 analysis (all PRs, all three issue sources)
+   - Aggregate CI failures, review comments, and code quality issues
+   - Remove duplicates across different sources
+   - Enrich with severity (Critical/High/Medium/Low) and complexity
+
+2. **Present comprehensive report** with severity breakdown:
+   ```
+   === Warden Analysis Report ===
+
+   Found N issues across M PRs:
+
+   PR #123: Feature XYZ
+   ├─ Critical (2): [Issue IDs with file:line]
+   ├─ High (3): [Issue IDs with file:line]
+   └─ Medium (1): [Issue IDs with file:line]
+
+   PR #125: Bug Fix ABC
+   └─ High (1): [Issue IDs with file:line]
+
+   Total: X Critical, Y High, Z Medium, W Low
+   ```
+
+3. **Ask user for approval** with clear options:
+   - "Fix all issues?" (default)
+   - "Fix only Critical and High?"
+   - "Fix specific PRs only?"
+   - "Preview detailed findings first?"
+   - "Abort (no changes)"
+
+4. **WAIT for user response** - Do NOT proceed to Phase 5 without explicit approval
+   - User may want to review detailed findings
+   - User may want to exclude certain PRs or issue types
+   - User may want to adjust severity thresholds
+
+**Common mistake**: Jumping directly from Phase 3 (Planning) to Phase 5 (Execution) without user approval. This violates the safety-first design and may make unwanted changes.
 
 **Phase 5: Execution**
 - **Complexity-based routing**:
