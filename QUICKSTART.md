@@ -5,142 +5,134 @@ Get started with Warden in 5 minutes or less.
 ## Prerequisites
 
 - GitHub CLI (`gh`) installed and authenticated
-- Git repository with open pull requests
+- AI coding assistant (Claude Code, GitHub Copilot, or Cursor)
+- Warden repository in your workspace/directory
+
+## How It Works
+
+1. **Open the Warden repository** in your editor/workspace
+2. **AI reads the instructions** (CLAUDE.md, .cursorrules, or copilot-instructions.md)
+3. **Say "Run Warden"** explicitly
+4. **AI executes the workflow** automatically
 
 ## Basic Usage
 
 ### 1. Review Your PRs (Default Settings)
 
-```bash
-# Review all your open PRs with standard settings
-warden
+```
+"Run the Warden skill"
+"Execute Warden on my open PRs"
 ```
 
 This runs with safe defaults:
 - Standard review depth (1 generalist reviewer)
-- Test affected packages only
+- Tests affected packages only
 - Balanced fix strategy
 - Auto-commit on success
 
 ### 2. Preview Without Fixes (Dry Run)
 
-```bash
-# See what issues Warden finds without making changes
-warden --dry-run
+```
+"Run Warden in dry-run mode"
+"Execute Warden without making changes to preview issues"
 ```
 
 ### 3. Security-Focused Review
 
-```bash
-# Deep security review with full test suite
-warden --reviewers security,testing --test-strategy full
 ```
+"Run Warden with security and testing reviewers, use full test suite"
+```
+→ Uses: `--reviewers security,testing --test-strategy full`
 
 ### 4. Fast Review (Documentation PRs)
 
-```bash
-# Skip tests for doc-only changes
-warden --test-strategy none
 ```
+"Run Warden and skip tests for doc-only changes"
+```
+→ Uses: `--test-strategy none`
 
 ## Common Scenarios
 
 ### Scenario 1: Quick Daily Review
-```bash
-warden --quiet --test-strategy affected
+```
+"Run Warden quietly with affected tests only"
+```
+→ Uses: `--quiet --test-strategy affected`
+
+### Scenario 2: Production Code Review
+```
+"Run Warden with conservative fixes, full tests, and review before pushing"
+```
+→ Uses: `--fix-strategy conservative --test-strategy full --require-review-before-push`
+
+### Scenario 3: Fix Specific PR
+```
+"Run Warden on PR #123"
+"Execute Warden to fix PR #456"
 ```
 
-### Scenario 2: Pre-Release Security Audit
-```bash
-warden \
-  --reviewers security,performance,architecture \
-  --test-strategy full \
-  --fix-strategy conservative \
-  --comment-on-pr
+### Scenario 4: Comprehensive Audit
 ```
-
-### Scenario 3: Fix Critical Issues Only
-```bash
-warden \
-  --test-on-severity critical \
-  --max-fixes-per-tier 5
+"Run Warden with security, performance, and architecture reviewers, full test suite, conservative fixes"
 ```
+→ Uses: `--reviewers security,performance,architecture --test-strategy full --fix-strategy conservative`
 
-## Key Parameters (Most Used)
+## What Warden Does
 
-| Parameter | What It Does | Example |
-|-----------|--------------|---------|
-| `--dry-run` | Preview only, no fixes | `warden --dry-run` |
-| `--reviewers` | Choose specialists | `--reviewers security,performance` |
-| `--test-strategy` | How to test | `--test-strategy none\|affected\|full` |
-| `--fix-strategy` | Fix aggressiveness | `--fix-strategy conservative` |
-| `--comment-on-pr` | Post findings to PR | `--comment-on-pr` |
-| `--quiet` | Minimal output | `--quiet` |
+1. **Discovers PRs** - Finds your open pull requests
+2. **Analyzes Three Sources**:
+   - CI failures (test failures, build errors)
+   - Review comments (requested changes)
+   - Code quality (security, performance issues)
+3. **Prioritizes** - Sorts by severity (Critical → High → Medium → Low)
+4. **Asks Permission** - Shows you what it found, asks what to fix
+5. **Fixes & Validates**:
+   - Applies fixes
+   - Runs: Build → Lint → Format → Test
+   - Only commits if ALL validations pass
+6. **Pushes Changes** - Updates the PR with fixes
+7. **Reports** - Shows summary of what was fixed
 
-## Understanding Output
+## Key Features
 
-Warden provides a summary after each run:
+- ✅ **Works on existing PRs** - Not creating new ones
+- ✅ **Discovers commands from your repo** - Reads CLAUDE.md, CI configs for build/test commands
+- ✅ **Validates before pushing** - Build + Lint + Test must pass
+- ✅ **Isolated workspaces** - Never touches your working directory
+- ✅ **Incremental fixes** - Fix by severity tier, rollback if tests fail
 
-```
-PR Review Summary
-=================
-Total PRs Analyzed: 3
-Total PRs Fixed: 2
+## Parameters
 
-Issues Fixed by Severity:
-  Critical: 2
-  High: 5
-  Medium: 3
+You can specify parameters in natural language. The AI understands:
 
-CI Status:
-  ✓ PR #123: All checks passing
-  ✓ PR #125: All checks passing
-```
+**Review depth**:
+- "Use security and performance reviewers"
+- "Run comprehensive review with all specialists"
 
-## What Happens When You Run Warden?
+**Test strategy**:
+- "Use full test suite"
+- "Test affected packages only"
+- "Skip tests"
 
-1. **Discovery**: Lists your open PRs
-2. **Analysis**: Reviews code, CI failures, comments (in parallel)
-3. **Planning**: Prioritizes issues by severity
-4. **User Interaction**: Asks which issues to fix
-5. **Execution**: Fixes issues, tests, commits, pushes (by severity tier)
-6. **Summary**: Shows results and next steps
+**Fix strategy**:
+- "Use conservative fixes"
+- "Be aggressive with fixes"
+- "Balanced approach"
 
-## Safety Features
+**Safety**:
+- "Require review before pushing"
+- "Create rollback branch"
+- "Protect main and master branches"
 
-Warden is safe by default:
-- ✅ Works in temporary workspace (never modifies your working directory)
-- ✅ Tests before committing (rollback if tests fail)
-- ✅ Per-tier commits (doesn't lose good fixes if later tier fails)
-- ✅ Verifies correct PR branch before pushing
-- ✅ Asks before fixing each PR
+See [PARAMETERS.md](docs/PARAMETERS.md) for all 50+ options.
 
 ## Next Steps
 
-- **Full parameter reference**: See [docs/PARAMETERS.md](docs/PARAMETERS.md)
-- **Detailed workflow**: See [docs/WORKFLOW.md](docs/WORKFLOW.md)
-- **More examples**: See [docs/EXAMPLES.md](docs/EXAMPLES.md)
-- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-- **Safety features**: See [docs/SAFETY.md](docs/SAFETY.md)
+- **Detailed workflow**: [WORKFLOW.md](docs/WORKFLOW.md)
+- **All parameters**: [PARAMETERS.md](docs/PARAMETERS.md)
+- **Safety features**: [SAFETY.md](docs/SAFETY.md)
+- **Troubleshooting**: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
-## Getting Help
+## Remember
 
-- **Platform-specific docs**:
-  - Claude Code: [CLAUDE.md](CLAUDE.md)
-  - GitHub Copilot: [.github/copilot-instructions.md](.github/copilot-instructions.md)
-  - Cursor: [.cursorrules](.cursorrules)
-- **General guidance**: [AGENTS.md](AGENTS.md)
-- **Issues**: https://github.com/abishop1990/warden/issues
-
-## Default Behavior
-
-Without any parameters, Warden:
-- Reviews PRs by current user
-- Uses 1 generalist reviewer (standard depth)
-- Tests only affected packages
-- Uses balanced fix strategy
-- Auto-commits when tests pass
-- Processes up to 10 PRs
-- Shows results in terminal
-
-**Safe to try!** Start with `warden --dry-run` to see what it would do.
+Always say **"Run Warden"** or **"Execute the Warden skill"** so the AI knows to use this specific workflow!

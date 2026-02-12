@@ -22,12 +22,21 @@ Warden analyzes and fixes issues from:
 
 ## How to Invoke
 
-Use natural language with @github:
+User must explicitly reference "Warden" for GitHub Copilot to use this skill:
 
+**Correct**:
 ```
-@github "Review my open PRs and help fix the issues"
-@github "Analyze PR #123 and fix CI failures and review comments"
+@github "Run the Warden skill"
+@github "Execute Warden on my open PRs"
+@github "Use Warden to analyze PR #123"
 ```
+
+**Too ambiguous** (Copilot won't know to use Warden):
+```
+@github "Review my PRs"  ← Generic, won't use this skill
+```
+
+**Required**: Have Warden repository in workspace so Copilot reads this copilot-instructions.md file.
 
 ### Key Parameters (40+ available - see README.md)
 - `--author <username>` - Review PRs by specific author

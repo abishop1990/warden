@@ -1,5 +1,15 @@
 # Cursor Rules for Warden
 
+## How to Invoke
+
+User must explicitly reference "Warden" for Cursor to use this skill:
+
+**Correct**:
+- "Run the Warden skill"
+- "Execute Warden on my PRs"
+
+**Required**: Have Warden repository in workspace so Cursor reads this .cursorrules file.
+
 ## About Warden
 
 Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, 50+ configuration parameters, and 1.2-1.7x performance improvement.

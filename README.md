@@ -43,54 +43,66 @@ Works across multiple AI platforms:
 
 **5-minute introduction**: See [QUICKSTART.md](QUICKSTART.md)
 
-### How to Use (Natural Language)
+### How to Use
 
-This is an AI skill - your AI assistant reads these instructions and executes the workflow.
+This is an AI skill - your AI assistant reads the instruction files in this repository and executes the workflow.
 
-**Claude Code**:
+**Claude Code** (in this repo directory):
 ```
-"Review and fix my open PRs"
-"Help me address the issues in my pull requests"
-```
-
-**GitHub Copilot**:
-```
-@github "Review my open PRs and help fix the issues"
+"Run the Warden skill"
+"Execute the Warden protocol on my open PRs"
+"Use Warden to review and fix my pull requests"
 ```
 
-**Cursor**:
+**GitHub Copilot** (with this repo in workspace):
 ```
-"Review my open PRs and fix the issues"
-"Run Warden on my pull requests"
+@github "Run the Warden skill from the instructions"
+@github "Execute the Warden protocol on my PRs"
 ```
 
-The AI reads the documentation in this repo and follows the workflow automatically.
+**Cursor** (with this repo in workspace):
+```
+"Run the Warden skill"
+"Execute Warden on my pull requests"
+```
+
+**How it works**:
+1. Navigate to or open the Warden repository in your editor
+2. AI reads `CLAUDE.md` / `.cursorrules` / `.github/copilot-instructions.md`
+3. Say "Run Warden" or "Execute the Warden skill"
+4. AI follows the workflow documented in this repo
 
 ### Example Requests
 
 **Basic review**:
 ```
-"Review my open PRs and fix the issues"
-"Analyze my pull requests for CI failures and review comments"
+"Run Warden on my open PRs"
+"Execute the Warden skill to fix my pull requests"
 ```
 
 **With specific parameters** (the AI will understand these):
 ```
-"Review my PRs with security and testing focus, use full test suite"
-  → Equivalent to: --reviewers security,testing --test-strategy full
+"Run Warden with security and testing focus, use full test suite"
+  → Uses: --reviewers security,testing --test-strategy full
 
-"Use conservative fixes for production code and require review before pushing"
-  → Equivalent to: --fix-strategy conservative --require-review-before-push
+"Execute Warden with conservative fixes and require review before pushing"
+  → Uses: --fix-strategy conservative --require-review-before-push
 
-"Do a comprehensive security audit with all safety features"
-  → Equivalent to: --reviewers security,performance,architecture
-                   --test-strategy full --fix-strategy conservative
+"Run Warden for a comprehensive security audit with all safety features"
+  → Uses: --reviewers security,performance,architecture
+          --test-strategy full --fix-strategy conservative
 ```
 
 **Preview mode**:
 ```
-"Show me what issues you'd find without making changes"
-  → Equivalent to: --dry-run
+"Run Warden in dry-run mode to preview issues without making changes"
+  → Uses: --dry-run
+```
+
+**Target specific PRs**:
+```
+"Run Warden on PR #123"
+"Execute Warden on PRs #123, #125, and #127"
 ```
 
 See [PARAMETERS.md](docs/PARAMETERS.md) for all 50+ configuration options.

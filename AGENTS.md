@@ -38,6 +38,25 @@ Warden is a cross-platform AI coding assistant skill for comprehensive automated
 
 Works across: Claude Code, GitHub Copilot, Cursor, Codex, and other AI assistants.
 
+## How to Invoke
+
+AI assistants need explicit reference to "Warden" to use this skill:
+
+**Correct**:
+- "Run the Warden skill"
+- "Execute the Warden protocol"
+- "Use Warden to review my PRs"
+
+**Too ambiguous**:
+- "Review my code" ← AI won't know to use Warden
+- "Fix my PRs" ← Could use generic workflow instead
+
+**How it works**:
+1. Open/navigate to the Warden repository
+2. AI reads platform-specific instructions (CLAUDE.md, .cursorrules, etc.)
+3. Say "Run Warden" explicitly
+4. AI follows the documented workflow
+
 ## Workflow Overview
 
 6-phase workflow for PR review and automated fixes:

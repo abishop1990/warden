@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with the Warden PR review and fix skill.
 
+## How to Invoke Warden
+
+User must explicitly reference "Warden" for Claude to use this skill:
+
+**Correct invocations**:
+- "Run the Warden skill"
+- "Execute Warden on my pull requests"
+- "Use Warden to review and fix PRs"
+
+**Required**: Navigate to or open the Warden repository so Claude reads this CLAUDE.md file.
+
 ## About Warden
 
 Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (50+ parameters), and platform-specific optimizations.
