@@ -1,8 +1,56 @@
 # Workflow
 
-**TL;DR**: Analyze existing PRs → Identify issues → Fix by tier → Validate → Push → Cleanup
+**TL;DR**: Discover validation commands (MANDATORY) → Analyze existing PRs → Identify issues → Fix by tier → Validate → Push → Cleanup
 
-## Phase 1: Discovery
+## Phase 0: Command Discovery (MANDATORY)
+
+**⚠️ CRITICAL**: This phase MUST complete before Phase 1. Phase 5 is BLOCKED without this.
+
+**Purpose**: Discover and save validation commands to artifact that Phase 5 will use.
+
+**Artifact**: `$WORKSPACE/.warden-validation-commands.sh`
+
+**Steps**:
+1. Create workspace: `/tmp/warden-repos/session-$(date +%s)`
+2. Clone target repository
+3. Discover commands from:
+   - AI instruction files (CLAUDE.md, .cursorrules, etc.)
+   - CI configs (.github/workflows/*.yml)
+   - Language configs (Makefile, package.json, etc.)
+   - Language defaults (fallback)
+4. Save to artifact: `.warden-validation-commands.sh`
+5. Verify artifact created (BLOCKING)
+
+**Example discovery**:
+```bash
+# Priority 1: AI instructions
+BUILD_CMD=$(grep "Build:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+LINT_CMD=$(grep "Lint:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+FORMAT_CMD=$(grep "Format:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+TEST_CMD=$(grep "Test:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+
+# Save to artifact
+cat > .warden-validation-commands.sh <<EOF
+export BUILD_CMD='$BUILD_CMD'
+export LINT_CMD='$LINT_CMD'
+export FORMAT_CMD='$FORMAT_CMD'
+export TEST_CMD='$TEST_CMD'
+EOF
+
+chmod +x .warden-validation-commands.sh
+```
+
+**Verification** (BLOCKING):
+```bash
+if [ ! -f ".warden-validation-commands.sh" ]; then
+  echo "❌ FATAL: Phase 0 failed - cannot proceed"
+  exit 1
+fi
+```
+
+See [PHASE-0-DISCOVERY.md](PHASE-0-DISCOVERY.md) for complete specification.
+
+## Phase 1: PR Discovery
 
 **Batch fetch existing open PRs:**
 ```bash
@@ -89,20 +137,39 @@ Fix: 1) All Critical+High  2) Critical only  3) Skip
 
 ## Phase 5: Execution
 
+**⚠️ MANDATORY PRE-CHECK**: Verify Phase 0 artifact exists before ANY fixes:
+
+```bash
+# BLOCKING CHECK
+ARTIFACT="$WORKSPACE/.warden-validation-commands.sh"
+
+if [ ! -f "$ARTIFACT" ]; then
+  echo "❌ FATAL: Phase 0 not completed!"
+  echo "Required: $ARTIFACT"
+  exit 1
+fi
+
+# Load validation commands
+source "$ARTIFACT"
+```
+
 **Per-PR loop**:
 
 ```
 FOR EACH PR:
 
+  0. VERIFY Phase 0 artifact exists (BLOCKING)
   1. Create temp workspace: /tmp/warden-repos/pr-${PR_NUMBER}-${TIMESTAMP}/
   2. Clone repo, checkout PR branch
-  3. FOR EACH TIER (Critical → High → Medium → Low):
+  3. Copy validation artifact to workspace
+  4. FOR EACH TIER (Critical → High → Medium → Low):
        a. Apply fixes
-       b. Validate: Build → Lint → Format → Test
-       c. If pass: Commit → Push
-       d. If fail: Rollback, skip tier
-  4. Cleanup workspace
-  5. Next PR
+       b. Source artifact: source .warden-validation-commands.sh
+       c. Validate: $BUILD_CMD → $LINT_CMD → $FORMAT_CMD → $TEST_CMD
+       d. If pass: Commit → Push
+       e. If fail: Rollback, skip tier
+  5. Cleanup workspace
+  6. Next PR
 ```
 
 **Workspace modes**:
@@ -111,14 +178,24 @@ FOR EACH PR:
 
 See [CONFIGURATION.md](CONFIGURATION.md) for workspace configuration details.
 
-**Validation sequence** (see VALIDATION-ORDER.md):
+**Validation sequence** (MUST source artifact first):
 ```bash
+# MANDATORY: Source validation commands from Phase 0 artifact
+source "$WORKSPACE/.warden-validation-commands.sh"
+
+# Execute discovered commands
 $BUILD_CMD  || { rollback; exit 1; }
 $LINT_CMD   || { rollback; exit 1; }
-$FORMAT_CMD
+$FORMAT_CMD  # auto-fix, ignore errors
 $TEST_CMD   || { rollback; exit 1; }
-git commit && git push
+
+# Only commit/push if all validations passed
+git add .
+git commit -m "Fix: ${TIER}"
+git push origin $(git branch --show-current)
 ```
+
+**Enforcement**: Phase 5 CANNOT proceed without Phase 0 artifact. See [PHASE-0-DISCOVERY.md](PHASE-0-DISCOVERY.md).
 
 **Workspace isolation**:
 - Each PR: Own temp directory

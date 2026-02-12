@@ -55,16 +55,18 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for command discovery from repo docs.
 
 Warden analyzes three issue sources (CI failures, review comments, code quality) - see AGENTS.md for details.
 
-This skill implements a 6-phase workflow for PR review and automated fixes:
+This skill implements an 8-phase workflow for PR review and automated fixes:
 
-1. **Discovery** - Batch API call to list and select PRs
+0. **Command Discovery (MANDATORY)** - Create `.warden-validation-commands.sh` artifact (BLOCKING for Phase 6)
+1. **PR Discovery** - Batch API call to list and select PRs
 2. **Parallel Analysis** - Launch ALL subagents for ALL PRs simultaneously
-3. **Planning** - Use Plan agent to aggregate, deduplicate, and prioritize findings
-4. **User Interaction** - Present structured report and select which issues to fix
-5. **Execution** - Incremental fixes by severity tier with validation and rollback
-6. **Summary Report** - Comprehensive metrics and next steps
+3. **Validation** - Verify PR branch integrity, run build checks
+4. **Planning** - Use Plan agent to aggregate, deduplicate, and prioritize findings
+5. **User Interaction** - Present structured report and select which issues to fix
+6. **Execution** - **MANDATORY: Verify Phase 0 artifact, source commands, validate before push**
+7. **Summary Report** - Comprehensive metrics and next steps
 
-See [README.md](README.md) for complete workflow documentation.
+See [README.md](README.md) for complete workflow documentation and [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for Phase 0 enforcement.
 
 ## Claude Code Specific Implementation
 
@@ -80,7 +82,46 @@ Claude Code provides these specialized agents via the Task tool:
 
 ### Subagent Usage by Phase
 
-**Phase 1: Discovery**
+**Phase 0: Command Discovery (MANDATORY)**
+- **Agent**: Main agent (Bash tool)
+- **Task**: Discover build/lint/format/test commands from repo
+- **Artifact**: Create `$WORKSPACE/.warden-validation-commands.sh`
+- **Commands**:
+  ```bash
+  # Create workspace
+  WORKSPACE="/tmp/warden-repos/session-$(date +%s)"
+  mkdir -p "$WORKSPACE"
+  cd "$WORKSPACE"
+
+  # Clone target repo
+  gh repo clone <owner/repo> .
+
+  # Discover commands (priority: AI files → CI configs → defaults)
+  BUILD_CMD=$(grep "Build:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+  LINT_CMD=$(grep "Lint:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+  FORMAT_CMD=$(grep "Format:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+  TEST_CMD=$(grep "Test:" CLAUDE.md | grep -o '`[^`]*`' | tr -d '`')
+
+  # Create artifact
+  cat > .warden-validation-commands.sh <<EOF
+  export BUILD_CMD='$BUILD_CMD'
+  export LINT_CMD='$LINT_CMD'
+  export FORMAT_CMD='$FORMAT_CMD'
+  export TEST_CMD='$TEST_CMD'
+  EOF
+
+  chmod +x .warden-validation-commands.sh
+
+  # BLOCKING CHECK
+  if [ ! -f ".warden-validation-commands.sh" ]; then
+    echo "❌ FATAL: Phase 0 failed"
+    exit 1
+  fi
+  ```
+- **Why**: Phase 6 CANNOT execute without these commands
+- **Critical**: If this phase fails, STOP - do not proceed to Phase 1
+
+**Phase 1: PR Discovery**
 - **Agent**: Main agent
 - **Task**: Single batch API call with `gh pr list --json` to get **PULL REQUESTS** (not branches!)
 - **Command**: `gh pr list --state open --json number,headRefName,title,statusCheckRollup,reviews,updatedAt`
@@ -182,7 +223,29 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 - **Why**: User interaction happens in main agent
 - **Details**: See AGENTS.md Phase 4 for complete requirements (report format, approval options, wait protocol)
 
-**Phase 5: Execution**
+**Phase 6: Execution**
+- **⚠️ MANDATORY PRE-CHECK**: Before ANY fixes, verify Phase 0 artifact:
+  ```bash
+  # BLOCKING CHECK
+  ARTIFACT="$WORKSPACE/.warden-validation-commands.sh"
+  if [ ! -f "$ARTIFACT" ]; then
+    echo "❌ FATAL: Phase 0 not completed - cannot execute fixes"
+    exit 1
+  fi
+
+  # Source validation commands
+  source "$ARTIFACT"
+  ```
+
+- **Validation sequence** (MUST run before push):
+  1. Apply fixes
+  2. Run `$BUILD_CMD` → fail? Rollback, abort tier
+  3. Run `$LINT_CMD` → fail? Rollback, abort tier
+  4. Run `$FORMAT_CMD` → auto-fix styling
+  5. Run `$TEST_CMD` → fail? Rollback, abort tier
+  6. Commit (only if all passed)
+  7. Push (only after commit)
+
 - **Complexity-based routing**:
 
   **Simple fixes** (1-5 lines, single file):
@@ -204,7 +267,7 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
   - **Action**: Flag for manual review
   - **Why**: Beyond automated fix scope
 
-**Phase 6: Summary**
+**Phase 7: Summary**
 - **Agent**: Main agent
 - **Task**: Collect results, generate summary report
 - **Why**: Simple aggregation and presentation
@@ -227,8 +290,9 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
    - Structured aggregation and prioritization
    - Better at deduplication and grouping than main agent
 
-4. **Incremental fix validation** in Phase 5:
-   - Fix Critical tier → Test → Commit → Push
+4. **Incremental fix validation** in Phase 6:
+   - Source `.warden-validation-commands.sh` artifact (MANDATORY)
+   - Fix Critical tier → Validate ($BUILD → $LINT → $FORMAT → $TEST) → Commit → Push
    - Only proceed to High tier if Critical succeeded
    - Per-tier rollback on failure
 

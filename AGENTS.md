@@ -83,14 +83,15 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed cleanup instructions.
 
 ## Workflow Overview
 
-7-phase workflow for PR review and automated fixes:
+8-phase workflow for PR review and automated fixes:
 
-1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
+0. **Command Discovery (MANDATORY)** - Discover and save validation commands to artifact - BLOCKING for Phase 6
+1. **PR Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
 2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL three sources (CI + Review + Code) regardless of CI status
-3. **Validation** - Discover repo validation commands (CLAUDE.md/CI), verify PR branch integrity, run build to check compilation
+3. **Validation** - Verify PR branch integrity, run build to check compilation
 4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
 5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
-6. **Execution** - Fix issues, validate incrementally, push (or escalate if architectural)
+6. **Execution** - **MANDATORY: Verify Phase 0 artifact exists, source commands, validate before push**
 7. **Summary** - Report metrics and next steps
 
 ## Default Configuration
@@ -113,6 +114,53 @@ When user doesn't specify parameters, use these defaults:
 - "Run full test suite" → All tests, not just affected
 - "Be conservative with fixes" → High confidence only
 - "Run in my current repo" → In-place mode (slower but handles complex setup)
+
+## Phase 0: Command Discovery (MANDATORY & BLOCKING)
+
+**⚠️ CRITICAL**: This phase is MANDATORY and must complete BEFORE Phase 1. Phase 6 (Execution) is BLOCKED until this completes.
+
+**Purpose**: Discover and save exact validation commands (build/lint/format/test) to an artifact that Phase 6 MUST use.
+
+**Why mandatory**: If agents can skip this, they WILL skip validation commands, causing immediate CI failures after push.
+
+**Artifact required**: `$WORKSPACE/.warden-validation-commands.sh`
+
+**Discovery priority**:
+1. AI instruction files (CLAUDE.md, .cursorrules, .github/copilot-instructions.md)
+2. CI configs (.github/workflows/*.yml)
+3. Language configs (Makefile, package.json, Cargo.toml, etc.)
+4. Language defaults (fallback only)
+
+**Implementation**:
+```bash
+# Create workspace
+WORKSPACE="/tmp/warden-repos/session-$(date +%s)"
+mkdir -p "$WORKSPACE"
+cd "$WORKSPACE"
+
+# Clone target repo
+gh repo clone <repo> .
+
+# Discover commands (see PHASE-0-DISCOVERY.md for full script)
+./discover-commands.sh > .warden-validation-commands.sh
+chmod +x .warden-validation-commands.sh
+
+# BLOCKING CHECK
+if [ ! -f ".warden-validation-commands.sh" ]; then
+  echo "❌ FATAL: Phase 0 failed - cannot proceed"
+  exit 1
+fi
+
+# Verify commands discovered
+source .warden-validation-commands.sh
+echo "Discovered commands:"
+echo "  BUILD:  ${BUILD_CMD:-[none]}"
+echo "  LINT:   ${LINT_CMD:-[none]}"
+echo "  FORMAT: ${FORMAT_CMD:-[none]}"
+echo "  TEST:   ${TEST_CMD:-[none]}"
+```
+
+**Enforcement**: Phase 6 MUST check this artifact exists before making ANY fixes. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for complete specification.
 
 ## Phase 3: Validation Pre-Check
 
@@ -233,6 +281,41 @@ Escalations Required:
 **Common mistake**: Jumping directly from Planning to Execution without user approval.
 
 ## Phase 6: Execution
+
+**⚠️ MANDATORY PRE-CHECK**: Before making ANY fixes, verify Phase 0 artifact exists:
+
+```bash
+# BLOCKING CHECK - runs before any fix attempt
+ARTIFACT="$WORKSPACE/.warden-validation-commands.sh"
+
+if [ ! -f "$ARTIFACT" ]; then
+  echo "❌ FATAL: Phase 0 not completed!"
+  echo "Required artifact: $ARTIFACT"
+  echo "CANNOT proceed without validation commands."
+  exit 1
+fi
+
+# Source validation commands
+source "$ARTIFACT"
+
+echo "✅ Phase 0 verification passed"
+echo "Validation commands loaded:"
+echo "  BUILD:  ${BUILD_CMD:-[skip]}"
+echo "  LINT:   ${LINT_CMD:-[skip]}"
+echo "  FORMAT: ${FORMAT_CMD:-[skip]}"
+echo "  TEST:   ${TEST_CMD:-[skip]}"
+```
+
+**Validation sequence** (MUST run before push):
+1. Apply fixes
+2. Run `$BUILD_CMD` → exit code != 0? Rollback, abort tier
+3. Run `$LINT_CMD` → exit code != 0? Rollback, abort tier
+4. Run `$FORMAT_CMD` → auto-fix styling
+5. Run `$TEST_CMD` → exit code != 0? Rollback, abort tier
+6. Commit (only if all validations passed)
+7. Push (only after commit)
+
+See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for enforcement details.
 
 **Auto-fix** simple issues, **escalate** complex/architectural ones.
 
