@@ -12,12 +12,13 @@ Warden is an AI coding assistant skill that reviews **existing Pull Requests**, 
 
 **How it works**:
 1. Developer creates PR (may have CI failures, review feedback, code issues)
-2. Warden analyzes **three issue sources**: CI failures + review comments + code quality
-3. **Warden discovers validation commands** from repo's AI instructions (CLAUDE.md, .github/workflows/, etc.)
+2. **Warden discovers validation commands** (Phase 0 - MANDATORY) from repo's AI instructions, CI configs, and saves to artifact
+3. Warden analyzes **three issue sources**: CI failures + review comments + code quality
 4. Warden identifies and prioritizes issues by severity
-5. Warden makes fixes addressing **all three sources** and validates using **the repo's own commands**
-6. Warden pushes fixes back to the same PR
-7. PR is updated with fixes, CI runs again
+5. Warden makes fixes addressing **all three sources**
+6. **Warden validates before push** using discovered commands (build → lint → format → test)
+7. Warden pushes fixes back to the same PR only if ALL validations pass
+8. PR is updated with fixes, CI runs again
 
 Works across multiple AI platforms:
 - **Claude Code** - Anthropic's AI pair programmer
@@ -30,7 +31,7 @@ Works across multiple AI platforms:
 - **Isolated Workspaces**: Each PR in its own temp directory - never modifies your working directory
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
 - **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
-- **Complete Validation**: Build + Lint + Test before every push (prevents CI failures)
+- **Mandatory Validation**: Phase 0 discovers commands, Phase 6 validates before push (prevents CI failures) - mechanically enforced
 - **Fully Configurable**: 25 core parameters with config file support (`~/.warden/config.yml`) - 44 total including advanced
 - **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
 - **Flexible Test Strategies**: none/affected/full/smart with granular control
@@ -128,6 +129,13 @@ Copilot reads `.github/copilot-instructions.md` automatically when in this repo.
 "Execute Warden on PRs #123, #125, and #127"
 ```
 
+**Cleanup workspaces**:
+```
+"Clean up Warden workspaces"
+"Clear Warden data"
+"Delete Warden temp directories"
+```
+
 See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETERS.md](docs/PARAMETERS.md) for all options (25 core + 19 advanced).
 
 ## Documentation
@@ -148,7 +156,8 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETER
 - **[AGENTS.md](AGENTS.md)** - Universal AI platform instructions
 - **[.cursorrules](.cursorrules)** - Cursor integration guide
 - **[copilot-instructions.md](.github/copilot-instructions.md)** - GitHub Copilot integration guide
-- **[WORKFLOW.md](docs/WORKFLOW.md)** - Internal workflow phases
+- **[WORKFLOW.md](docs/WORKFLOW.md)** - Internal workflow phases (8 phases)
+- **[PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md)** - Mandatory command discovery with artifact enforcement
 - **[COMMANDS.md](docs/COMMANDS.md)** - Command discovery and execution
 - **[VALIDATION-ORDER.md](docs/VALIDATION-ORDER.md)** - Validation sequence requirements
 
@@ -209,13 +218,23 @@ Warden is highly configurable. You can request options using natural language:
 
 ## How Warden Ensures Quality
 
-Warden validates all fixes before pushing to your PR:
+**Phase 0 (MANDATORY)**: Discovers validation commands from your repo
+- AI instruction files (CLAUDE.md, .cursorrules, etc.)
+- CI configuration (.github/workflows/*.yml)
+- Language-specific configs (Makefile, package.json)
+- Saves to artifact: `.warden-validation-commands.sh`
+
+**Phase 6 (MANDATORY)**: Validates all fixes before pushing
+- **BLOCKING CHECK**: Verifies Phase 0 artifact exists
+- Sources discovered commands from artifact
 - Runs build to ensure compilation
-- Runs linting to catch code quality issues
+- Runs linting to catch code quality issues (including formatters like gofmt, black, prettier)
 - Runs tests to ensure functionality
 - Only commits and pushes if ALL validations pass
 
-This prevents broken CI and ensures fixes don't introduce new issues.
+**Enforcement**: Phase 6 cannot execute without Phase 0 artifact - mechanically prevents skipping validation.
+
+This prevents broken CI and ensures fixes don't introduce new issues. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for technical details.
 
 ## Contributing
 
