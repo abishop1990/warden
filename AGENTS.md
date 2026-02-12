@@ -63,7 +63,7 @@ AI assistants need explicit reference to "Warden" to use this skill:
 
 1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
 2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing three issue sources (CI/Review/Code)
-3. **Validation** - Verify PR branch integrity (file count, compilation, corruption detection)
+3. **Validation** - Discover repo validation commands (CLAUDE.md/CI), verify PR branch integrity, run build to check compilation
 4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
 5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
 6. **Execution** - Fix issues, validate incrementally, push (or escalate if architectural)
@@ -86,12 +86,22 @@ When user doesn't specify parameters, use these defaults:
 
 **Purpose**: Detect branch corruption and architectural issues before attempting fixes.
 
-**For each PR, verify:**
-1. **Branch integrity**: `git show HEAD --stat | wc -l` vs `gh pr view {num} --json files -q '.files | length'`
-   - If mismatch >20%: Flag as "⚠️ Branch corruption - needs investigation"
-2. **Compilation**: Does PR branch actually compile?
-   - Run language-specific build command
-   - If fails: Analyze whether it's fixable or architectural
+**Step 1: Discover validation commands** (see [COMMANDS.md](docs/COMMANDS.md)):
+```bash
+# Priority: AI instructions → CI config → Language defaults
+BUILD_CMD=$(grep "Build:" CLAUDE.md | grep '`' | tr -d '`')
+LINT_CMD=$(grep "Lint:" CLAUDE.md | grep '`' | tr -d '`')
+TEST_CMD=$(grep "Test:" CLAUDE.md | grep '`' | tr -d '`')
+
+# Fallback to CI workflow if not in CLAUDE.md
+[ -z "$BUILD_CMD" ] && BUILD_CMD=$(grep "run:.*build" .github/workflows/*.yml | head -1 | sed 's/.*run: //')
+```
+
+**Step 2: Verify each PR**:
+1. **Branch integrity**: Compare local vs GitHub file counts
+   - If mismatch >20%: Flag as "⚠️ Branch corruption"
+2. **Compilation**: Run `$BUILD_CMD` in PR branch
+   - If fails: Categorize (fixable vs architectural)
 3. **File count anomalies**: Check for 1000+ file changes
    - Usually indicates merge issues or massive refactoring
 

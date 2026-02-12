@@ -1,9 +1,11 @@
 # CRITICAL: Validation Order
 
+**TL;DR**: Discover validation commands ([COMMANDS.md](COMMANDS.md)), then run Build → Lint → Test BEFORE pushing.
+
 ## The Problem
 
 **WRONG**: Push → Validate → See CI fail
-**RIGHT**: Validate → Push
+**RIGHT**: Discover commands → Validate → Push
 
 ## The Correct Sequence
 
@@ -22,6 +24,14 @@ For each severity tier:
 
 ## Implementation
 
+**First, discover commands** (see [COMMANDS.md](COMMANDS.md) for full discovery process):
+```bash
+BUILD_CMD=$(grep "Build:" CLAUDE.md | grep '`' | tr -d '`')
+LINT_CMD=$(grep "Lint:" CLAUDE.md | grep '`' | tr -d '`')
+TEST_CMD=$(grep "Test:" CLAUDE.md | grep '`' | tr -d '`')
+```
+
+**Then validate before push**:
 ```bash
 # After applying fixes:
 
