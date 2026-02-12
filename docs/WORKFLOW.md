@@ -89,11 +89,28 @@ For each PR, launch parallel subagents:
 **Subagent A - CI Failures**: Test failures, build errors, lint issues
 - Even if CI is green, check for warnings or flaky tests
 
-**Subagent B - Review Comments** (ALL comments, including bots):
+**Subagent B - Review Comments** (**CRITICAL: Fetch BOTH endpoints**):
+
+**MANDATORY: Fetch review summaries AND comment threads**:
+1. **Review summaries**: `gh pr view ${PR} --json reviews`
+   - Overall state: APPROVED, CHANGES_REQUESTED, COMMENTED
+   - Who reviewed and when
+2. **Review comment threads**: `gh api /repos/${OWNER}/${REPO}/pulls/${PR}/comments`
+   - **THIS IS WHERE DETAILED FEEDBACK LIVES**
+   - File-specific comments with line numbers
+   - Actual bug reports and issues to fix
+   - Thread replies and resolution status
+
+**Parse for**:
+- **First**: Filter out resolved threads (`resolved: true`) - already addressed
 - Human reviews (requested changes, suggestions, questions)
 - **Bot/AI reviews** (GitHub Copilot, code analysis bots, security scanners)
-- Parse for actionable items: "should", "must", "concern", "todo", "recommend"
-- Don't skip green-CI PRs - they may have unresolved review feedback
+- Actionable items: "should", "must", "concern", "todo", "recommend", "bug", "leak"
+- Unresolved comment threads
+
+**Gap #15**: Only fetching review summaries misses critical feedback like "Line 123: This loop causes data leaks"
+
+See [REVIEW-COMMENTS.md](REVIEW-COMMENTS.md) for complete enforcement details.
 
 **Subagent C-E - Code Quality**: Security, performance, architecture issues
 - Independent of CI and review status

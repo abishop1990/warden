@@ -200,11 +200,20 @@ gh repo view
 WARDEN_TMP="/tmp/warden-session-$(date +%s)"
 mkdir -p "$WARDEN_TMP"
 
+# Get repo info for API calls
+OWNER=$(gh repo view --json owner -q .owner.login)
+REPO=$(gh repo view --json name -q .name)
+
 # For each PR, fetch all needed data
 for PR_NUM in ${SELECTED_PRS[@]}; do
-  # PR metadata and reviews
+  # PR metadata and review SUMMARIES
   gh pr view $PR_NUM --json number,title,body,author,statusCheckRollup,reviews,comments,updatedAt \
     > "$WARDEN_TMP/pr-${PR_NUM}.json"
+
+  # ⚠️ CRITICAL (Gap #15): Review COMMENT THREADS (separate endpoint!)
+  # This is where detailed feedback lives (file-specific comments with bugs/issues)
+  gh api "/repos/${OWNER}/${REPO}/pulls/${PR_NUM}/comments" \
+    > "$WARDEN_TMP/pr-${PR_NUM}-review-comments.json"
 
   # PR diff for code analysis
   gh pr diff $PR_NUM > "$WARDEN_TMP/pr-${PR_NUM}.diff"
@@ -212,6 +221,14 @@ for PR_NUM in ${SELECTED_PRS[@]}; do
   # CI check details
   gh pr checks $PR_NUM --json name,status,conclusion,detailsUrl \
     > "$WARDEN_TMP/pr-${PR_NUM}-checks.json"
+done
+
+# BLOCKING CHECK: Verify review comment threads were fetched
+for PR_NUM in ${SELECTED_PRS[@]}; do
+  if [ ! -f "$WARDEN_TMP/pr-${PR_NUM}-review-comments.json" ]; then
+    echo "❌ FATAL: Review comment threads not fetched for PR #${PR_NUM}"
+    exit 1
+  fi
 done
 ```
 
@@ -224,15 +241,30 @@ Subagent 1 - CI Analysis:
  Identify failed checks, categorize by type (test/build/lint).
  PR context in /tmp/warden-session-xxx/pr-3935.json"
 
-Subagent 2 - Review Comments (ALL reviews, including bots):
-"Analyze ALL review comments in /tmp/warden-session-xxx/pr-3935.json (reviews and comments fields).
+Subagent 2 - Review Comments (**MANDATORY: Analyze BOTH files**):
+"⚠️ CRITICAL (Gap #15): Analyze review data from BOTH sources:
 
- CRITICAL: Include bot/AI reviews (GitHub Copilot, security scanners, code analysis bots).
- Parse for actionable keywords: 'should', 'must', 'concern', 'issue', 'todo', 'recommend'.
- Identify unresolved threads and actionable feedback.
- Categorize by severity.
+ File 1: /tmp/warden-session-xxx/pr-3935.json (reviews field)
+   - Contains: Review SUMMARIES (APPROVED, CHANGES_REQUESTED states)
+   - Who reviewed and overall state
 
- DON'T skip this even if CI is green - review feedback exists independently of CI status."
+ File 2: /tmp/warden-session-xxx/pr-3935-review-comments.json
+   - Contains: Review COMMENT THREADS (detailed feedback)
+   - File-specific comments with line numbers
+   - Actual bug reports like: 'Line 123: This loop causes data leaks'
+   - **THIS IS WHERE CRITICAL FEEDBACK LIVES**
+
+ Parse BOTH files for:
+ - **FIRST**: Filter out resolved threads (resolved: true) - already addressed
+ - Human reviews (requested changes, suggestions, questions)
+ - Bot/AI reviews (GitHub Copilot, security scanners, code analysis bots)
+ - Actionable keywords: 'should', 'must', 'concern', 'issue', 'todo', 'recommend', 'bug', 'leak'
+ - Unresolved comment threads (no author reply)
+ - File/line specific issues
+
+ DON'T skip this even if CI is green - review feedback exists independently of CI status.
+
+ See docs/REVIEW-COMMENTS.md for data structure differences."
 
 Subagent 3 - Code Quality:
 "Review code changes in /tmp/warden-session-xxx/pr-3935.diff.

@@ -172,11 +172,15 @@ gh pr diff 123
   3. **Codebase Context**: Read README.md, package.json/go.mod, project structure
 - **Task**: For each PR, launch parallel agents:
   1. CI Analysis: `gh pr checks` + log parsing
-  2. Review Analysis: `gh pr view --json reviews,comments`
+  2. Review Analysis (**MUST fetch BOTH** - Gap #15 fix):
+     - Review summaries: `gh pr view --json reviews`
+     - Review comment threads: `gh api /repos/{owner}/{repo}/pulls/{pr}/comments`
+     - Parse BOTH for actionable items (see docs/REVIEW-COMMENTS.md)
   3. Code Quality: `gh pr diff` + contextual analysis (with PR description, repo instructions, codebase overview)
   4. (Thorough) Security Review: Deep security focus
   5. (Thorough) Performance Review: Deep performance focus
   6. (Comprehensive) Architecture Review: Deep design focus
+  7. (If ticket integration enabled) Ticket Alignment: Extract ticket ID, fetch requirements, compare to PR scope
 - **Why**: Complex multi-step analysis requiring autonomy and context
 - **Batching Strategy**: Max 5 PRs per batch to prevent overload (see AGENTS.md for details).
 
@@ -188,7 +192,11 @@ gh pr diff 123
 **Example parallel Task calls** (Standard depth):
 ```
 Task(general-purpose, "Analyze CI failures for PR #123: fetch checks, parse logs, categorize failures")
-Task(general-purpose, "Analyze review comments for PR #123: fetch comments, identify unresolved, categorize")
+Task(general-purpose, "Analyze review comments for PR #123 (Gap #15 fix):
+  MUST fetch BOTH:
+  1. Review summaries: gh pr view 123 --json reviews
+  2. Review comment threads: gh api /repos/{owner}/{repo}/pulls/123/comments
+  Parse BOTH for actionable items, unresolved threads, critical feedback")
 Task(general-purpose, "Perform code review for PR #123 WITH CONTEXT:
   - PR description: [title and body from gh pr view]
   - Repo conventions: [content from CLAUDE.md and AGENTS.md]
