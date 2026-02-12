@@ -43,6 +43,74 @@ fi
 **What is deleted**: Temporary PR workspaces
 **What is preserved**: Configuration files, user's working directory, git repositories
 
+## Git Workflow (IMPORTANT)
+
+**Use PR-based workflow, NOT direct pushes to main**
+
+When making changes to the Warden repository itself (fixing gaps, adding features, updating docs):
+
+### Standard Workflow
+
+1. **Create feature branch**:
+   ```bash
+   git checkout -b gap-N-description
+   # Examples:
+   # - gap-17-fix-timeout-handling
+   # - feature-add-gitlab-support
+   # - docs-update-examples
+   ```
+
+2. **Make changes and commit**:
+   ```bash
+   # Make your changes
+   git add <files>
+   git commit -m "Descriptive commit message"
+   ```
+
+3. **Push branch to remote**:
+   ```bash
+   git push origin gap-N-description
+   ```
+
+4. **Create pull request**:
+   ```bash
+   gh pr create --title "Fix Gap #N: Brief description" --body "$(cat <<'EOF'
+   ## The Gap
+   [Explain what was wrong]
+
+   ## The Fix
+   [Explain the solution]
+
+   ## Changes
+   [List key files/changes]
+
+   ## Testing
+   [How to verify the fix works]
+   EOF
+   )"
+   ```
+
+5. **Wait for review/approval** - Do NOT merge immediately
+
+6. **After approval** - User will merge or give permission to merge
+
+### Why PR Workflow?
+
+- ✅ Allows code review before merging
+- ✅ Tracks progress across multiple changes
+- ✅ Enables collaboration (others can comment/suggest)
+- ✅ Maintains clean merge history
+- ✅ Prevents accidental breaking changes
+
+### Emergency Hotfixes
+
+Only push directly to main if:
+- User explicitly requests it
+- Critical production issue requiring immediate fix
+- User says "push to main" or "skip PR"
+
+**Default**: Always use PRs unless instructed otherwise.
+
 ## About Warden
 
 Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, streamlined configuration (25 core parameters + config files), and platform-specific optimizations.
@@ -452,6 +520,8 @@ See README.md for complete language-specific command reference.
 - Cursor rules: [.cursorrules](.cursorrules)
 
 ## Development & Maintenance
+
+**IMPORTANT**: See "Git Workflow" section above - always use PR-based workflow, NOT direct pushes to main.
 
 When making significant changes to Warden (new features, workflow changes, enforcement mechanisms):
 
