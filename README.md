@@ -11,10 +11,10 @@ Warden is an AI coding assistant skill that reviews **existing Pull Requests**, 
 
 **How it works**:
 1. Developer creates PR (may have CI failures, review feedback, code issues)
-2. Warden analyzes the existing PR
+2. Warden analyzes **three issue sources**: CI failures + review comments + code quality
 3. **Warden discovers validation commands** from repo's AI instructions (CLAUDE.md, .github/workflows/, etc.)
-4. Warden identifies specific issues to fix
-5. Warden makes fixes and validates them using **the repo's own commands** (not hard-coded defaults)
+4. Warden identifies and prioritizes issues by severity
+5. Warden makes fixes addressing **all three sources** and validates using **the repo's own commands**
 6. Warden pushes fixes back to the same PR
 7. PR is updated with fixes, CI runs again
 

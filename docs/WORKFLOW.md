@@ -11,11 +11,11 @@ gh pr list --author @me --state open --json number,title,statusCheckRollup --lim
 
 ## Phase 2: Analysis (Parallel)
 
-For each PR, launch parallel subagents:
+For each PR, launch parallel subagents to analyze **three issue sources**:
 
-**Subagent A**: Analyze CI failures
-**Subagent B**: Analyze review comments
-**Subagent C-E**: Code quality review (depth-dependent)
+**Subagent A**: Analyze CI failures (test failures, build errors, lint issues)
+**Subagent B**: Analyze review comments (requested changes, unresolved feedback)
+**Subagent C-E**: Code quality review (security, performance, architecture)
 
 **Context gathered**:
 1. PR description → Understand intent
@@ -38,12 +38,18 @@ Aggregate findings, deduplicate, sort by severity (Critical → High → Medium 
 
 ## Phase 4: User Interaction
 
-Present report, ask what to fix:
+Present report combining all three issue sources, ask what to fix:
 ```
 PR #123: Fix authentication
 
-Critical (2): SQL injection, Missing auth check
-High (3): Race condition, Unvalidated input, Missing error handling
+Critical (2):
+  [CI] SQL injection in login endpoint
+  [Review] Missing auth check per @reviewer
+
+High (3):
+  [CI] Test failure: race condition in session handler
+  [Review] Unvalidated user input per @security-team
+  [Code] Missing error handling in payment flow
 
 Fix: 1) All Critical+High  2) Critical only  3) Skip
 ```

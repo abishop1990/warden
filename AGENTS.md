@@ -43,14 +43,15 @@ Works across: Claude Code, GitHub Copilot, Cursor, Codex, and other AI assistant
 6-phase workflow for PR review and automated fixes:
 
 1. **Discovery** - Batch API call to list PRs (single call, not N calls)
-2. **Analysis** - Launch ALL subagents for ALL PRs in parallel with full context:
-   - PR description (intent and purpose)
-   - Repo AI instructions (project conventions)
-   - Codebase overview (architecture)
+2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing **three issue sources**:
+   - **CI failures** (test failures, build errors, lint issues)
+   - **Review comments** (requested changes, unresolved feedback)
+   - **Code quality** (security, performance, architecture issues)
+   - Context: PR description, repo conventions, codebase architecture
    - Review depth: standard/thorough/comprehensive
-3. **Planning** - Aggregate, deduplicate, prioritize by severity
+3. **Planning** - Aggregate all three sources, deduplicate, prioritize by severity
 4. **User Interaction** - Present structured report, select fixes
-5. **Execution** - Incremental fixes (Critical → High → Medium → Low) with per-tier validation
+5. **Execution** - Fix all issue types (CI + Review + Code), validate, push
 6. **Summary Report** - Metrics and next steps
 
 ## Key Optimizations
