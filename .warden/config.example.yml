@@ -104,6 +104,49 @@ defaults:
   #   - src/
   #   - cmd/
 
+  # ---------------------------------------------------------------------------
+  # Ticket Integration (optional)
+  # ---------------------------------------------------------------------------
+  # ticket_integration: false          # Enable ticket alignment analysis
+  # ticket_system: jira                # jira, aha, linear, github-issues
+  # ticket_id: null                    # Override auto-detection from PR
+
+# ==============================================================================
+# Ticket Integration (optional)
+# ==============================================================================
+# Uncomment to enable ticket alignment analysis
+# ticket_integration:
+#   enabled: false
+#   system: jira  # jira, aha, linear, github-issues
+#
+#   # JIRA configuration
+#   jira:
+#     domain: your-company.atlassian.net
+#     email: your-email@company.com
+#     api_token: ${JIRA_API_TOKEN}  # Set via environment variable
+#
+#   # Aha configuration
+#   aha:
+#     domain: your-company.aha.io
+#     api_key: ${AHA_API_KEY}
+#
+#   # Linear configuration
+#   linear:
+#     api_key: ${LINEAR_API_KEY}
+#
+#   # Ticket ID extraction patterns (regex)
+#   patterns:
+#     - '[A-Z]+-[0-9]+'              # JIRA: PROJ-123
+#     - 'AHA-[A-Z]+-[0-9]+'          # Aha: AHA-PROJ-123
+#     - '#[0-9]+'                    # GitHub Issues: #123
+#
+#   # Analysis configuration
+#   analysis:
+#     check_acceptance_criteria: true
+#     check_description_match: true
+#     flag_scope_divergence: true
+#     severity_threshold: medium     # Report at this severity or higher
+
 # ==============================================================================
 # Platform-Specific Settings
 # ==============================================================================

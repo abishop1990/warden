@@ -4,7 +4,7 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/abishop1990/warden)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Parameters](https://img.shields.io/badge/parameters-25_core-orange)](docs/PARAMETERS.md)
+[![Parameters](https://img.shields.io/badge/parameters-28_core-orange)](docs/PARAMETERS.md)
 
 ## Overview
 
@@ -32,7 +32,8 @@ Works across multiple AI platforms:
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
 - **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
 - **Mandatory Validation**: Phase 0 discovers commands, Phase 6 validates before push (prevents CI failures) - mechanically enforced
-- **Fully Configurable**: 25 core parameters with config file support (`~/.warden/config.yml`) - 44 total including advanced
+- **Ticket Integration**: Compares PRs against JIRA/Aha/Linear tickets, detects scope divergence and missing requirements
+- **Fully Configurable**: 28 core parameters with config file support (`~/.warden/config.yml`) - 47 total including advanced
 - **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
 - **Flexible Test Strategies**: none/affected/full/smart with granular control
 - **CI/CD Integration**: Detects and diagnoses test failures, build errors, and lint issues
@@ -145,6 +146,7 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETER
 - **[INSTALL.md](INSTALL.md)** - Installation guide for all platforms
 - **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
 - **[CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration system (config files, workspace modes, setup)
+- **[TICKET-INTEGRATION.md](docs/TICKET-INTEGRATION.md)** - JIRA/Aha/Linear integration for ticket alignment analysis
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Real-world usage examples for every scenario
 - **[PARAMETERS.md](docs/PARAMETERS.md)** - Complete reference for all configuration options
 - **[SAFETY.md](docs/SAFETY.md)** - Safety features and best practices

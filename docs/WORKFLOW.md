@@ -82,7 +82,7 @@ gh pr list --author @me --state open --json number,title,statusCheckRollup,revie
 
 ## Phase 2: Analysis (Parallel)
 
-**CRITICAL**: Analyze **ALL three issue sources** for **EVERY PR**, regardless of CI status.
+**CRITICAL**: Analyze **ALL sources** for **EVERY PR**, regardless of CI status.
 
 For each PR, launch parallel subagents:
 
@@ -97,6 +97,13 @@ For each PR, launch parallel subagents:
 
 **Subagent C-E - Code Quality**: Security, performance, architecture issues
 - Independent of CI and review status
+
+**Subagent F - Ticket Alignment** (if ticket integration enabled):
+- Extract ticket IDs from PR title/body/branch
+- Fetch ticket details via MCP or API (JIRA, Aha, Linear, GitHub Issues)
+- Compare PR changes to ticket requirements
+- Report alignment or divergence (scope creep, missing requirements)
+- See [TICKET-INTEGRATION.md](TICKET-INTEGRATION.md) for configuration
 
 **Context gathered**:
 1. PR description → Understand intent
@@ -119,9 +126,14 @@ Aggregate findings, deduplicate, sort by severity (Critical → High → Medium 
 
 ## Phase 4: User Interaction
 
-Present report combining all three issue sources, ask what to fix:
+Present report combining all sources (CI + Review + Code + Ticket), ask what to fix:
 ```
 PR #123: Fix authentication
+
+Ticket Alignment (PROJ-456):
+├─ ✅ Core auth implemented (matches ticket)
+├─ ⚠️ Missing: Password reset link (acceptance criteria)
+└─ 🚨 Scope divergence: Analytics code (not in ticket)
 
 Critical (2):
   [CI] SQL injection in login endpoint
@@ -131,6 +143,9 @@ High (3):
   [CI] Test failure: race condition in session handler
   [Review] Unvalidated user input per @security-team
   [Code] Missing error handling in payment flow
+
+Recommendation:
+- Split PR: Core auth (matches PROJ-456) + Analytics (new ticket)
 
 Fix: 1) All Critical+High  2) Critical only  3) Skip
 ```

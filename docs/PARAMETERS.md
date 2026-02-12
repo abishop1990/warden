@@ -1,8 +1,8 @@
 # Warden - Parameter Reference (v1.2)
 
-**Streamlined for v1.2**: Reduced from 59 to 25 core parameters, focusing on natural language expressibility and avoiding premature optimization.
+**Streamlined for v1.2**: Reduced from 59 to 28 core parameters, focusing on natural language expressibility and avoiding premature optimization.
 
-## Core Parameters (25)
+## Core Parameters (28)
 
 Essential parameters for everyday use. These cover 95% of real-world scenarios.
 
@@ -193,6 +193,30 @@ Skip paths in review (comma-separated).
 #### `--focus-paths <patterns>`
 Only review these paths (comma-separated).
 - **Example**: `--focus-paths "src/,cmd/"`
+
+---
+
+### Ticket Integration (3)
+
+#### `--ticket-integration`
+Enable ticket alignment analysis (checks PR against ticket requirements).
+- **Default**: `false` (enabled if configured in config.yml)
+- **Example**: `--ticket-integration`
+- **Use case**: Detect scope divergence, missing requirements, unrelated changes
+- **Requires**: Ticket system configured (JIRA, Aha, Linear, GitHub Issues)
+
+#### `--ticket-system <system>`
+Override ticket system type.
+- **Default**: From config.yml
+- **Options**: `jira`, `aha`, `linear`, `github-issues`
+- **Example**: `--ticket-system jira`
+
+#### `--ticket-id <id>`
+Explicitly specify ticket ID (overrides auto-detection from PR).
+- **Example**: `--ticket-id PROJ-123`
+- **Use case**: When ticket ID not in PR title/body/branch
+
+See [TICKET-INTEGRATION.md](TICKET-INTEGRATION.md) for complete configuration and setup.
 
 ---
 

@@ -87,7 +87,7 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed cleanup instructions.
 
 0. **Command Discovery (MANDATORY)** - Discover and save validation commands to artifact - BLOCKING for Phase 6
 1. **PR Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
-2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL three sources (CI + Review + Code) regardless of CI status
+2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL sources (CI + Review + Code + Ticket) regardless of CI status
 3. **Validation** - Verify PR branch integrity, run build to check compilation
 4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
 5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**

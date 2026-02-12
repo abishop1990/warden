@@ -55,6 +55,32 @@ defaults:
   output_format: text
   verbose: false
 
+# Ticket Integration (optional)
+ticket_integration:
+  enabled: false                      # Enable ticket alignment analysis
+  system: jira                        # jira, aha, linear, github-issues
+
+  jira:
+    domain: your-company.atlassian.net
+    email: your-email@company.com
+    api_token: ${JIRA_API_TOKEN}     # Set via environment variable
+
+  aha:
+    domain: your-company.aha.io
+    api_key: ${AHA_API_KEY}
+
+  linear:
+    api_key: ${LINEAR_API_KEY}
+
+  patterns:                           # Ticket ID regex patterns
+    - '[A-Z]+-[0-9]+'                 # JIRA: PROJ-123
+    - 'AHA-[A-Z]+-[0-9]+'             # Aha: AHA-PROJ-123
+
+  analysis:
+    check_acceptance_criteria: true
+    check_description_match: true
+    flag_scope_divergence: true
+
 # Platform-Specific Settings
 platform:
   claude_code:
