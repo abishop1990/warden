@@ -2,7 +2,7 @@
 
 ## About Warden
 
-Warden v2.0: Cross-platform AI skill for comprehensive automated PR review and fixes with massively parallel execution, incremental validation, and 1.7x performance improvement.
+Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, 40+ configuration parameters, and 1.2-1.7x performance improvement.
 
 ## Workflow Overview
 
@@ -50,17 +50,20 @@ See [README.md](README.md) for complete documentation.
 **Targeted**: Shallow clones, test only affected packages, format only changed files
 **Background**: Non-blocking cleanup
 
-**Performance**: 167s vs 291s = **1.7x faster**
+**Performance**: 167s-240s vs 291s = **1.2-1.7x faster** (config-dependent)
 
 ## Implementation Guidelines
 
 1. **Use Composer for multi-file analysis and edits**
 2. **Leverage codebase-wide context**
 3. **Batch API calls** - `gh pr list --json`
-4. **Shallow clone** - `--depth=1`
-5. **Test targeted** - Only affected packages
+4. **Shallow clone** - `--depth=1` (unless `--reuse-workspace`)
+5. **Test according to strategy** - Respect `--test-strategy` setting
 6. **Incremental fixes** - By severity tier
 7. **Never modify user's working directory**
+8. **Respect configuration** - All 40+ parameters
+9. **Comment on PR** - If `--comment-on-pr` enabled
+10. **Apply file filters** - Honor `--ignore-paths` and `--focus-paths`
 
 ## Subagent Selection
 

@@ -14,12 +14,17 @@ Warden is an AI coding assistant skill that analyzes CI failures, review comment
 ## Features
 
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
+- **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
+- **Fully Configurable**: 40+ parameters for review depth, testing, fixes, output, and integrations
+- **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
+- **Flexible Test Strategies**: none/affected/full/smart with granular control
 - **CI/CD Integration**: Detects and diagnoses test failures, build errors, and lint issues
-- **Review Comment Analysis**: Identifies unresolved feedback requiring action
-- **Staff Engineer-Level Review**: Deep code quality analysis for logic errors, security, performance, and best practices
-- **Incremental Fixes**: Fixes and validates Critical issues before moving to lower severity
-- **Multi-Language Support**: Adapts to Go, Python, JavaScript/TypeScript, Rust, and more
-- **Optimized Workspaces**: Shallow clones and smart caching for speed
+- **Incremental Validation**: Fixes and tests by severity tier with per-tier rollback
+- **Multi-Language Support**: Auto-detects or override for Go, Python, JavaScript/TypeScript, Rust, and more
+- **Optimized Workspaces**: Shallow clones, workspace reuse, background cleanup
+- **PR Integration**: Comment on PRs with findings, update existing comments
+- **External Integrations**: Slack notifications, Jira updates, webhooks
+- **Smart File Filtering**: Ignore paths, focus on specific directories, skip large files
 
 ## Usage
 
@@ -38,17 +43,127 @@ Review and fix PRs using the pr-review-and-fix workflow
 Review and fix PRs using the pr-review-and-fix workflow
 ```
 
-### Optional Parameters
-- `--author <username>` - Review PRs by specific author (defaults to current user)
-- `--repo <owner/repo>` - Target specific repository (defaults to current)
-- `--state open|all` - PR state to review (defaults to open)
-- `--limit <n>` - Max number of PRs to review (defaults to 10)
-- `--dry-run` - Preview issues without making fixes
-- `--severity critical|high|medium|low` - Only show issues at or above this level
-- `--review-depth standard|thorough|comprehensive` - Review thoroughness (defaults to standard)
-  - `standard`: One generalist reviewer (faster, recommended for most PRs)
-  - `thorough`: Two reviewers - security + performance focused (for sensitive code)
-  - `comprehensive`: Three reviewers - security + performance + architecture (for core infrastructure)
+### Parameters
+
+#### PR Selection
+- `--author <username>` - Review PRs by specific author (default: current user)
+- `--repo <owner/repo>` - Target specific repository (default: current)
+- `--state open|closed|all` - PR state to review (default: open)
+- `--limit <n>` - Max number of PRs to review (default: 10)
+
+#### Review Configuration
+- `--review-depth standard|thorough|comprehensive` - Preset review depths (default: standard)
+  - `standard`: One generalist reviewer (fastest)
+  - `thorough`: Two reviewers - security + performance
+  - `comprehensive`: Three reviewers - security + performance + architecture
+
+- `--reviewers generalist|security|performance|architecture|maintainability|testing` - Custom reviewer selection (comma-separated)
+  - `generalist`: Broad coverage across all areas (default)
+  - `security`: OWASP Top 10, auth, injection, secrets, crypto
+  - `performance`: N+1 queries, memory leaks, algorithms, caching
+  - `architecture`: Design patterns, SOLID, coupling, scalability
+  - `maintainability`: Code clarity, documentation, tech debt
+  - `testing`: Test coverage, edge cases, test quality
+  - Example: `--reviewers security,testing`
+
+- `--reviewer-count 1-5` - Number of reviewers (overrides --review-depth)
+  - Default: 1 (generalist)
+
+- `--review-focus security|performance|architecture|maintainability|all` - Target specific area (default: all)
+
+#### Test Strategy
+- `--test-strategy none|affected|full|smart` - Testing approach (default: affected)
+  - `none`: Skip all tests (for docs/config PRs)
+  - `affected`: Only test changed packages
+  - `full`: Run entire test suite
+  - `smart`: Affected packages + related/dependent packages
+
+- `--test-on-severity critical,high|critical|all|none` - Only test when fixing certain severities (default: all)
+
+- `--test-timeout <seconds>` - Max seconds per test run (default: 300)
+
+- `--skip-tests-for <extensions>` - Skip tests if only these file types changed (default: .md,.yml,.yaml,.json,.txt)
+  - Example: `--skip-tests-for .md,.rst,.adoc`
+
+- `--test-before-fix` - Run tests before making changes to verify CI failure (default: false)
+
+#### Fix Strategy
+- `--fix-strategy conservative|balanced|aggressive` - Fix approach (default: balanced)
+  - `conservative`: Only high-confidence fixes, flag everything else
+  - `balanced`: Fix most issues, flag complex/risky ones
+  - `aggressive`: Attempt all fixes including complex refactors
+
+- `--max-fixes-per-tier <n>` - Limit fixes per severity tier (default: unlimited)
+
+- `--auto-commit-on-success` - Auto-commit each tier if tests pass (default: true)
+
+- `--dry-run` - Preview issues without making any fixes
+
+#### PR Integration
+- `--comment-on-pr` - Post findings as PR comment (default: false)
+
+- `--comment-template <path>` - Custom comment template file
+
+- `--update-comment` - Update existing comment instead of adding new (default: false)
+
+#### Performance & Limits
+- `--max-parallel-prs <n>` - Max concurrent PR analysis (default: 10)
+
+- `--max-parallel-agents <n>` - Max total concurrent subagents (default: unlimited)
+
+#### Workspace Management
+- `--keep-workspace` - Don't clean up workspace for debugging (default: false)
+
+- `--workspace-dir <path>` - Custom workspace location (default: /tmp/pr-review-*)
+
+- `--reuse-workspace` - Reuse workspace across PRs from same repo (default: false)
+
+#### Output & Reporting
+- `--output-format text|json|markdown|html` - Summary report format (default: text)
+
+- `--save-report <path>` - Save summary to file (default: console only)
+
+- `--verbose` - Detailed logging (default: false)
+
+- `--quiet` - Minimal output (default: false)
+
+- `--severity <level>` - Only show issues at or above this level (default: all)
+
+#### Language & Tooling
+- `--language go|python|javascript|typescript|rust` - Force language detection (default: auto-detect)
+
+- `--formatter <command>` - Custom formatter command (overrides language default)
+  - Example: `--formatter "black --line-length 100"`
+
+- `--linter <command>` - Custom linter command
+
+- `--test-command <command>` - Custom test command
+
+#### File Filtering
+- `--ignore-paths <patterns>` - Skip paths in review (comma-separated)
+  - Default: `vendor/,node_modules/,*.pb.go,*_generated.go,dist/,build/`
+  - Example: `--ignore-paths "third_party/,generated/"`
+
+- `--focus-paths <patterns>` - Only review these paths (comma-separated)
+  - Example: `--focus-paths "src/,cmd/"`
+
+- `--max-file-size <lines>` - Skip files larger than N lines (default: unlimited)
+
+#### Integration Hooks
+- `--notify-slack <webhook-url>` - Send summary to Slack
+
+- `--update-jira <ticket-id>` - Update Jira ticket with findings
+
+- `--webhook <url>` - POST summary JSON to webhook
+
+#### Advanced Options
+- `--review-rules <path>` - Custom review rules YAML file (default: .warden-rules.yml if exists)
+
+- `--diff-context <lines>` - Lines of context in diffs (default: 3)
+
+- `--cache-analysis` - Cache CI logs and review comments for 1 hour (default: false)
+
+- `--incremental-review` - Only review files changed since last Warden run (default: false)
 
 ## Workflow
 
@@ -362,6 +477,163 @@ Next Steps:
 
 ## Implementation Notes
 
+### Parameter Interactions
+
+**Review Configuration Precedence**:
+```
+--reviewers (explicit list)
+  > --reviewer-count (numeric)
+  > --review-depth (preset)
+  > default (1 generalist)
+```
+
+**Test Strategy Logic**:
+```
+1. Check --test-strategy
+   - If 'none': skip all tests
+   - If file extensions match --skip-tests-for: skip tests
+
+2. Check --test-on-severity
+   - Only test if fixing issues at or above threshold
+
+3. Execute test strategy:
+   - affected: Test changed packages only
+   - full: Run entire suite
+   - smart: Affected + dependencies
+```
+
+**Fix Strategy Behavior**:
+```
+conservative:
+  - Only fix if confidence > 90%
+  - Flag architectural/multi-file changes
+  - Never attempt complex refactors
+
+balanced (default):
+  - Fix most issues (confidence > 70%)
+  - Flag architectural changes
+  - Attempt moderate complexity refactors
+
+aggressive:
+  - Fix all issues (confidence > 50%)
+  - Attempt complex refactors
+  - Only flag if >5 files or architectural
+```
+
+**File Filtering Order**:
+```
+1. Apply --focus-paths (if specified): only include these
+2. Apply --ignore-paths: exclude these
+3. Apply --max-file-size: skip large files
+4. Proceed with review
+```
+
+**Parallelization Limits**:
+```
+Total agents = PRs × (2 + reviewer_count)
+               ↓
+If > --max-parallel-agents:
+  - Process PRs in batches
+  - Wait for batch to complete before next
+
+If > --max-parallel-prs:
+  - Queue remaining PRs
+  - Process as slots become available
+```
+
+### Defaults & Recommendations
+
+**Safe Defaults** (optimized for most PRs):
+```bash
+--review-depth standard
+--test-strategy affected
+--test-on-severity all
+--fix-strategy balanced
+--max-parallel-prs 10
+--auto-commit-on-success true
+--comment-on-pr false
+```
+
+**Recommended for Security-Sensitive Code**:
+```bash
+--reviewers security,testing
+--review-focus security
+--test-strategy full
+--fix-strategy conservative
+--comment-on-pr true
+--notify-slack $WEBHOOK
+```
+
+**Recommended for Performance-Critical Code**:
+```bash
+--reviewers performance,architecture
+--test-strategy smart
+--fix-strategy balanced
+```
+
+**Recommended for Documentation PRs**:
+```bash
+--test-strategy none
+--reviewers maintainability
+--fix-strategy aggressive
+```
+
+**Recommended for Large-Scale Refactors**:
+```bash
+--reviewers architecture,maintainability,testing
+--test-strategy full
+--fix-strategy conservative
+--max-fixes-per-tier 10
+--comment-on-pr true
+```
+
+### Custom Review Rules File
+
+Create `.warden-rules.yml` in your repository:
+
+```yaml
+# .warden-rules.yml
+reviewers:
+  default: [generalist]
+  security_sensitive_paths:
+    - auth/
+    - crypto/
+    - payment/
+  reviewers: [security, testing]
+
+  performance_critical_paths:
+    - database/
+    - cache/
+    - api/handlers/
+  reviewers: [performance]
+
+test_strategy:
+  default: affected
+  critical_paths:
+    - auth/
+    - payment/
+  strategy: full
+
+fix_strategy:
+  default: balanced
+  production_code:
+    - src/
+    - cmd/
+  strategy: conservative
+
+ignore_patterns:
+  - vendor/
+  - node_modules/
+  - "*.pb.go"
+  - "*_generated.go"
+
+severity_overrides:
+  # Treat certain issues as higher severity in critical paths
+  auth/:
+    medium: high
+    high: critical
+```
+
 ### Subagent Selection Criteria
 
 **Simple Fix** (1-5 lines, single file):
@@ -565,6 +837,150 @@ Task(general-purpose, "Architecture review PR #123 with context")
 - Targeted testing: 3-5x faster test execution
 - Batch API calls: 3x faster Phase 1
 
+## Usage Examples
+
+### Basic Usage
+```bash
+# Review your open PRs with defaults (standard depth, affected tests)
+warden
+
+# Review specific author
+warden --author octocat
+
+# Dry run (preview only)
+warden --dry-run
+```
+
+### Review Depth Control
+```bash
+# Quick review (1 generalist)
+warden --review-depth standard
+
+# Security-focused review
+warden --reviewers security,testing --review-focus security
+
+# Thorough audit
+warden --reviewers security,performance,architecture --reviewer-count 3
+
+# Performance-critical PR
+warden --reviewers performance,architecture
+```
+
+### Test Strategy Control
+```bash
+# Documentation PR - skip tests
+warden --test-strategy none
+
+# Only test Critical fixes
+warden --test-on-severity critical --test-strategy affected
+
+# Full test suite validation
+warden --test-strategy full
+
+# Config changes only - auto-skip tests
+warden --skip-tests-for .yml,.yaml,.json
+```
+
+### Fix Strategy Control
+```bash
+# Conservative (high-confidence only)
+warden --fix-strategy conservative
+
+# Aggressive (fix everything)
+warden --fix-strategy aggressive --max-fixes-per-tier 20
+
+# Preview before committing
+warden --auto-commit-on-success false
+```
+
+### PR Integration
+```bash
+# Post findings as PR comment
+warden --comment-on-pr
+
+# Update existing comment
+warden --comment-on-pr --update-comment
+
+# Custom comment template
+warden --comment-on-pr --comment-template .github/warden-comment.md
+```
+
+### Performance Tuning
+```bash
+# Analyze many PRs efficiently
+warden --limit 50 --max-parallel-prs 20
+
+# Limit subagents for resource constraints
+warden --max-parallel-agents 10
+
+# Reuse workspace for speed
+warden --reuse-workspace
+```
+
+### Output & Reporting
+```bash
+# Save JSON report
+warden --output-format json --save-report warden-report.json
+
+# Verbose logging
+warden --verbose
+
+# Quiet mode (minimal output)
+warden --quiet --save-report report.md
+```
+
+### File Filtering
+```bash
+# Ignore generated code
+warden --ignore-paths "vendor/,*.pb.go,*_generated.go"
+
+# Focus on specific directories
+warden --focus-paths "src/,cmd/"
+
+# Skip large files
+warden --max-file-size 5000
+```
+
+### Integration Hooks
+```bash
+# Notify Slack
+warden --notify-slack https://hooks.slack.com/services/YOUR/WEBHOOK
+
+# Update Jira
+warden --update-jira PROJ-123
+
+# Custom webhook
+warden --webhook https://api.example.com/pr-review
+```
+
+### Advanced Combinations
+```bash
+# Security audit for production
+warden \
+  --reviewers security,testing \
+  --review-focus security \
+  --test-strategy full \
+  --fix-strategy conservative \
+  --comment-on-pr \
+  --notify-slack $SLACK_WEBHOOK
+
+# Fast iteration on draft PR
+warden \
+  --state all \
+  --test-strategy affected \
+  --test-on-severity critical \
+  --max-fixes-per-tier 5 \
+  --quiet
+
+# Comprehensive infrastructure review
+warden \
+  --reviewers security,performance,architecture \
+  --test-strategy smart \
+  --comment-on-pr \
+  --save-report infrastructure-audit.md \
+  --verbose
+```
+
 ## Platform Configuration
 
 Warden automatically works with your AI assistant through platform-specific configuration files:
@@ -592,4 +1008,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Version
 
-**2.0.0** - Optimized release with parallel execution, incremental fixes, and platform-specific enhancements
+**1.2.0** - Feature-rich release with comprehensive configurability, contextual review, and platform optimizations

@@ -4,11 +4,17 @@ This file provides unified instructions for all AI coding assistants working wit
 
 ## About Warden
 
-Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. Version 2.0 features:
+Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. Version 1.2 features:
 - **Massively parallel execution** across all PRs
+- **Contextual review** with PR intent, repo conventions, codebase architecture
+- **40+ configuration parameters** for complete control
+- **5 specialized reviewers** (security, performance, architecture, maintainability, testing)
+- **Flexible test strategies** (none/affected/full/smart)
 - **Incremental fix validation** by severity tier
+- **PR integration** (comment on PRs, update existing comments)
+- **External integrations** (Slack, Jira, webhooks)
 - **Platform-specific optimizations** for each AI assistant
-- **1.7x faster** than sequential approach
+- **1.2-1.7x faster** than sequential (configuration-dependent)
 
 Works across: Claude Code, GitHub Copilot, Cursor, Codex, and other AI assistants.
 
@@ -53,12 +59,22 @@ Works across: Claude Code, GitHub Copilot, Cursor, Codex, and other AI assistant
 
 ### Claude Code
 ```
-Review and fix PRs using the pr-review-and-fix workflow [--review-depth standard|thorough|comprehensive]
+Review and fix PRs using the pr-review-and-fix workflow [OPTIONS]
 ```
-- Use `general-purpose` agents for Phase 2 analysis (all in parallel, 3-5 per PR depending on depth)
+
+**Common options**:
+- `--reviewers security,performance` - Custom reviewers
+- `--test-strategy affected|full|none` - Test approach
+- `--fix-strategy conservative|balanced|aggressive` - Fix aggressiveness
+- `--comment-on-pr` - Post findings to PR
+- `--dry-run` - Preview only
+
+**Implementation**:
+- Use `general-purpose` agents for Phase 2 analysis (all in parallel, 3-5 per PR depending on config)
 - Gather context: PR description + CLAUDE.md/AGENTS.md + codebase overview
 - Use `Plan` agent for Phase 3 aggregation
 - Use `Bash` agent for moderate fixes, `general-purpose` for complex fixes
+- Respect all configuration parameters
 
 ### GitHub Copilot
 ```

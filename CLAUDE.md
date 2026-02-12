@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## About Warden
 
-Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 2.0 includes massively parallel execution, incremental fix validation, and platform-specific optimizations.
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (40+ parameters), and platform-specific optimizations.
 
 ## Skill Overview
 
@@ -250,10 +250,16 @@ For 3 PRs with ~500 lines changed each:
 - **Phase 5**: 120s (incremental validation vs 180s sequential)
 - **Phase 6**: 5s (summary generation)
 
-**Total**:
-- Standard: ~172s (1.7x faster)
-- Thorough: ~187s (1.6x faster)
-- Comprehensive: ~202s (1.4x faster)
+**Total** (with default settings):
+- Standard review + affected tests: ~172s (1.7x faster)
+- Thorough review + affected tests: ~187s (1.6x faster)
+- Comprehensive review + full tests: ~240s (1.2x faster)
+
+**Performance varies by configuration**:
+- `--test-strategy none`: Saves 40-60s
+- `--test-strategy full`: Adds 60-120s
+- `--max-parallel-prs 20`: 1.5x faster for large batches
+- `--reuse-workspace`: Saves 5-10s per PR from same repo
 
 ### Subagent Selection Decision Tree
 
@@ -295,14 +301,18 @@ See README.md for complete language-specific command reference.
 
 1. **Always use parallel Task calls** when launching multiple Phase 2 subagents
 2. **Never modify user's working directory** - always use temporary workspace
-3. **Test before committing** - no exceptions
+3. **Respect test strategy** - skip tests if `--test-strategy none` or file types match `--skip-tests-for`
 4. **Use Plan agent for Phase 3** - better at structured aggregation
-5. **Shallow clone** for workspace setup - much faster
-6. **Test only affected packages** - not full test suite
+5. **Shallow clone** for workspace setup (unless `--reuse-workspace`)
+6. **Test according to strategy** - affected/full/smart/none
 7. **Rollback per-tier** - don't throw away good fixes
-8. **Clean up in background** - don't block on workspace removal
-9. **Provide detailed commit messages** - include issue IDs and affected files
-10. **Flag complex changes** - don't attempt beyond automation scope
+8. **Clean up in background** (unless `--keep-workspace`)
+9. **Respect fix limits** - honor `--max-fixes-per-tier`
+10. **Flag based on strategy** - conservative flags more, aggressive flags less
+11. **Comment on PR** if `--comment-on-pr` is set
+12. **Respect parallelization limits** - `--max-parallel-prs` and `--max-parallel-agents`
+13. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
+14. **Send notifications** if webhook/Slack/Jira configured
 
 ## Example Execution Flow
 

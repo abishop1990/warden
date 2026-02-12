@@ -2,9 +2,9 @@
 
 ## About Warden
 
-Warden v2.0: Cross-platform AI skill for automated PR review and fixes.
+Warden v1.2: Cross-platform AI skill for automated PR review and fixes.
 
-**New in v2.0**: Massively parallel execution, incremental validation, 1.7x faster performance.
+**New in v1.2**: Contextual review, 40+ configuration parameters, 5 specialized reviewers, flexible test strategies, PR integration, external webhooks.
 
 ## Invocation
 
@@ -12,13 +12,17 @@ Warden v2.0: Cross-platform AI skill for automated PR review and fixes.
 @copilot /pr-review-and-fix
 ```
 
-### Parameters
+### Key Parameters (40+ available - see README.md)
 - `--author <username>` - Review PRs by specific author
 - `--repo <owner/repo>` - Target specific repository
-- `--state open|all` - PR state to review
-- `--limit <n>` - Max PRs to review
+- `--reviewers security,performance,architecture` - Custom reviewers
+- `--test-strategy none|affected|full|smart` - Test approach
+- `--fix-strategy conservative|balanced|aggressive` - Fix aggressiveness
+- `--comment-on-pr` - Post findings to PR
+- `--notify-slack <webhook>` - Send summary to Slack
 - `--dry-run` - Preview without fixing
-- `--severity critical|high|medium|low` - Minimum severity level
+
+See README.md for complete parameter reference.
 
 ## Workflow
 
@@ -71,7 +75,7 @@ All GitHub operations use `gh` CLI:
 **Parallel**: All PR analysis runs simultaneously (2.5x faster)
 **Incremental**: Fix/test/commit by severity, rollback per-tier
 **Targeted**: Shallow clones, test only affected packages
-**Performance**: 167s vs 291s sequential = **1.7x faster**
+**Performance**: 167s-240s vs 291s sequential = **1.2-1.7x faster** (configuration-dependent)
 
 ## Implementation Guidelines
 
