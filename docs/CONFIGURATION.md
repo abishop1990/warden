@@ -332,6 +332,87 @@ defaults:
     - hotfix/*
 ```
 
+## Cleanup Commands
+
+Warden supports cleanup operations through natural language or explicit commands.
+
+### Clean Temporary Workspaces
+
+**Natural language** (works across all AI platforms):
+```
+"Clean up Warden workspaces"
+"Clear Warden data"
+"Delete Warden temp directories"
+"Remove Warden workspace files"
+```
+
+**What gets deleted**:
+- All temporary workspaces in `/tmp/warden-repos/` (or custom `workspace.root`)
+- Leftover workspaces from interrupted/failed runs
+- Total disk space freed will be reported
+
+**What is preserved**:
+- Configuration files (`~/.warden/config.yml`, `.warden/config.yml`)
+- Project files and your working directory
+- Git repositories outside Warden workspaces
+
+### Manual Cleanup
+
+If you prefer direct commands:
+
+```bash
+# Clean default workspace root
+rm -rf /tmp/warden-repos/
+
+# Clean custom workspace root (check config first)
+WORKSPACE_ROOT=$(grep "root:" ~/.warden/config.yml | awk '{print $2}')
+rm -rf "$WORKSPACE_ROOT"
+
+# Find and show workspace disk usage before cleaning
+du -sh /tmp/warden-repos/
+```
+
+### Automatic Cleanup
+
+Warden automatically cleans workspaces:
+- After each PR completes successfully
+- On system restart (for `/tmp/` location)
+- Unless `--keep-workspace` is specified
+
+**Stale workspaces** can accumulate if:
+- Warden crashes or is interrupted
+- Errors occur and `workspace.keep_on_error: true`
+- Manual cleanup needed: Use natural language command above
+
+### Cleanup by Age
+
+Clean only old workspaces (example for >7 days):
+
+```bash
+# Find workspaces older than 7 days
+find /tmp/warden-repos/ -type d -name "pr-*" -mtime +7 -exec rm -rf {} \;
+
+# Or interactively review first
+find /tmp/warden-repos/ -type d -name "pr-*" -mtime +7 -ls
+```
+
+### Reset Configuration
+
+To remove all Warden configuration (⚠️ destructive):
+
+```bash
+# Remove global config
+rm -f ~/.warden/config.yml
+
+# Remove project config
+rm -f .warden/config.yml
+
+# Remove workspaces
+rm -rf /tmp/warden-repos/
+```
+
+**Note**: Only do this if you want to start fresh. Configuration is not regenerated automatically.
+
 ## Troubleshooting
 
 ### Workspace Not Cleaned Up

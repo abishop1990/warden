@@ -13,6 +13,36 @@ User must explicitly reference "Warden" for Claude to use this skill:
 
 **Required**: Navigate to or open the Warden repository so Claude reads this CLAUDE.md file.
 
+## Cleanup Operations
+
+When user requests cleanup (natural language examples):
+- "Clean up Warden workspaces"
+- "Clear Warden data"
+- "Delete Warden temp directories"
+- "Remove Warden files"
+
+**Execute cleanup**:
+```bash
+# Get workspace root from config or use default
+WORKSPACE_ROOT=$(grep -A5 "^workspace:" ~/.warden/config.yml 2>/dev/null | grep "root:" | awk '{print $2}' || echo "/tmp/warden-repos")
+
+# Show disk usage before cleanup
+echo "Warden workspace usage:"
+du -sh "$WORKSPACE_ROOT" 2>/dev/null || echo "No workspaces found"
+
+# Clean up workspaces
+if [ -d "$WORKSPACE_ROOT" ]; then
+  FREED=$(du -sh "$WORKSPACE_ROOT" | awk '{print $1}')
+  rm -rf "$WORKSPACE_ROOT"
+  echo "Cleaned up $FREED from $WORKSPACE_ROOT"
+else
+  echo "No Warden workspaces to clean (workspace root: $WORKSPACE_ROOT)"
+fi
+```
+
+**What is deleted**: Temporary PR workspaces
+**What is preserved**: Configuration files, user's working directory, git repositories
+
 ## About Warden
 
 Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, streamlined configuration (25 core parameters + config files), and platform-specific optimizations.

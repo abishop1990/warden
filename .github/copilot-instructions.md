@@ -32,6 +32,18 @@ User must explicitly reference "Warden" for GitHub Copilot to use this skill.
 - Say "Run Warden" in Copilot Chat
 - Copilot follows the workflow documented here
 
+## Cleanup Operations
+
+User requests: "Clean up Warden workspaces", "Clear Warden data", "Remove Warden temp files"
+
+Execute cleanup:
+```bash
+WORKSPACE_ROOT=$(grep -A5 "^workspace:" ~/.warden/config.yml 2>/dev/null | grep "root:" | awk '{print $2}' || echo "/tmp/warden-repos")
+du -sh "$WORKSPACE_ROOT" 2>/dev/null && rm -rf "$WORKSPACE_ROOT" && echo "Cleaned up Warden workspaces"
+```
+
+Deletes: Temp PR workspaces. Preserves: Config files, working directory. See [CONFIGURATION.md](docs/CONFIGURATION.md).
+
 **Installation (Current Workarounds - 2026-02)**:
 
 Ideal (when Copilot skills system is stable):

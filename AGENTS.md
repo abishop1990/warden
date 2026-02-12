@@ -61,6 +61,26 @@ AI assistants need explicit reference to "Warden" to use this skill:
 3. Say "Run Warden" explicitly
 4. AI follows the documented workflow
 
+## Cleanup Operations
+
+When user requests workspace cleanup:
+
+**Natural language patterns**:
+- "Clean up Warden workspaces"
+- "Clear Warden data"
+- "Delete Warden temp directories"
+
+**Implementation**:
+1. Determine workspace root from config or use default `/tmp/warden-repos`
+2. Show disk usage before cleanup
+3. Remove workspace directory: `rm -rf <workspace-root>`
+4. Report freed disk space
+
+**What gets deleted**: Temporary PR workspaces in configured workspace root
+**What is preserved**: Config files (`~/.warden/config.yml`, `.warden/config.yml`), user's working directory
+
+See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed cleanup instructions.
+
 ## Workflow Overview
 
 7-phase workflow for PR review and automated fixes:

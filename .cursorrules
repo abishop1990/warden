@@ -10,6 +10,12 @@ User must explicitly reference "Warden" for Cursor to use this skill:
 
 **Required**: Have Warden repository in workspace so Cursor reads this .cursorrules file.
 
+## Cleanup Operations
+
+User requests: "Clean up Warden workspaces", "Clear Warden data", etc.
+
+Execute: Determine workspace root (config or `/tmp/warden-repos`), show disk usage, delete workspaces, report freed space. Preserves config files and working directory. See [CONFIGURATION.md](docs/CONFIGURATION.md).
+
 ## About Warden
 
 Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, streamlined configuration (25 core parameters + config file support), and 1.2-1.7x performance improvement.
