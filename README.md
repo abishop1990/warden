@@ -4,7 +4,7 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/abishop1990/warden)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Parameters](https://img.shields.io/badge/parameters-50+-orange)](docs/PARAMETERS.md)
+[![Parameters](https://img.shields.io/badge/parameters-23_core-orange)](docs/PARAMETERS.md)
 
 ## Overview
 
@@ -31,7 +31,7 @@ Works across multiple AI platforms:
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
 - **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
 - **Complete Validation**: Build + Lint + Test before every push (prevents CI failures)
-- **Fully Configurable**: 50+ parameters for review depth, testing, fixes, output, and integrations
+- **Fully Configurable**: 23 core parameters for review depth, testing, fixes, and output (42 total including advanced)
 - **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
 - **Flexible Test Strategies**: none/affected/full/smart with granular control
 - **CI/CD Integration**: Detects and diagnoses test failures, build errors, and lint issues
@@ -128,7 +128,7 @@ Copilot reads `.github/copilot-instructions.md` automatically when in this repo.
 "Execute Warden on PRs #123, #125, and #127"
 ```
 
-See [PARAMETERS.md](docs/PARAMETERS.md) for all 50+ configuration options.
+See [PARAMETERS.md](docs/PARAMETERS.md) for all configuration options (23 core + 19 advanced).
 
 ## Documentation
 
@@ -204,7 +204,7 @@ Warden is highly configurable. You can request options using natural language:
 "Protect the main branch"
 ```
 
-**Full parameter reference**: See [PARAMETERS.md](docs/PARAMETERS.md) for technical details on all 50+ options.
+**Full parameter reference**: See [PARAMETERS.md](docs/PARAMETERS.md) for technical details on all options.
 
 ## How Warden Ensures Quality
 

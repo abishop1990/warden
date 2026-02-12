@@ -1,64 +1,39 @@
-# Warden - Complete Parameter Reference
+# Warden - Parameter Reference (v1.2)
 
-All 50+ configuration parameters for complete control over Warden's behavior.
+**Streamlined for v1.2**: Reduced from 59 to ~25 core parameters, focusing on natural language expressibility and avoiding premature optimization.
 
-## Quick Reference by Category
+## Core Parameters (23)
 
-| Category | Count | Jump To |
-|----------|-------|---------|
-| PR Selection | 4 | [↓](#pr-selection) |
-| Review Config | 10 | [↓](#review-configuration) |
-| Test Strategy | 6 | [↓](#test-strategy) |
-| Fix Strategy | 4 | [↓](#fix-strategy) |
-| Safety | 6 | [↓](#safety-features-new) |
-| PR Integration | 3 | [↓](#pr-integration) |
-| Performance | 5 | [↓](#performance--limits) |
-| Workspace | 4 | [↓](#workspace-management) |
-| Output | 5 | [↓](#output--reporting) |
-| Language | 4 | [↓](#language--tooling) |
-| File Filtering | 3 | [↓](#file-filtering) |
-| Integrations | 3 | [↓](#integration-hooks) |
-| Advanced | 4 | [↓](#advanced-options) |
+Essential parameters for everyday use. These cover 95% of real-world scenarios.
 
----
+### PR Selection (4)
 
-## PR Selection
-
-### `--author <username>`
+#### `--author <username>`
 Review PRs by specific author.
 - **Default**: Current user (`@me`)
 - **Example**: `--author octocat`
 
-### `--repo <owner/repo>`
+#### `--repo <owner/repo>`
 Target specific repository.
 - **Default**: Current repository
 - **Example**: `--repo abishop1990/warden`
 
-### `--state <open|closed|all>`
+#### `--state <open|closed|all>`
 PR state to review.
 - **Default**: `open`
 - **Example**: `--state all`
 
-### `--limit <n>`
+#### `--limit <n>`
 Maximum number of PRs to review.
 - **Default**: `10`
 - **Example**: `--limit 50`
 
 ---
 
-## Review Configuration
+### Review Configuration (1)
 
-### `--review-depth <standard|thorough|comprehensive>`
-Preset review depths.
-- **Default**: `standard`
-- **Options**:
-  - `standard`: 1 generalist reviewer (fastest)
-  - `thorough`: 2 reviewers (security + performance)
-  - `comprehensive`: 3 reviewers (security + performance + architecture)
-- **Example**: `--review-depth thorough`
-
-### `--reviewers <list>`
-Custom reviewer selection (comma-separated).
+#### `--reviewers <list>`
+Specify reviewers (comma-separated). This single parameter replaces all review depth/count/focus params.
 - **Default**: `generalist`
 - **Available reviewers**:
   - `generalist`: Broad coverage across all areas
@@ -67,26 +42,14 @@ Custom reviewer selection (comma-separated).
   - `architecture`: Design patterns, SOLID, coupling, scalability
   - `maintainability`: Code clarity, docs, tech debt
   - `testing`: Test coverage, edge cases, test quality
-- **Example**: `--reviewers security,testing`
-- **Overrides**: Takes precedence over `--review-depth`
-
-### `--reviewer-count <1-5>`
-Number of reviewers (overrides presets).
-- **Default**: `1`
-- **Range**: 1-5
-- **Example**: `--reviewer-count 3`
-
-### `--review-focus <area>`
-Target specific concern area.
-- **Default**: `all`
-- **Options**: `security`, `performance`, `architecture`, `maintainability`, `all`
-- **Example**: `--review-focus security`
+- **Example**: `--reviewers security,performance,testing`
+- **Natural language alternative**: Say "use comprehensive review" for multiple reviewers
 
 ---
 
-## Test Strategy
+### Test Strategy (3)
 
-### `--test-strategy <strategy>`
+#### `--test-strategy <strategy>`
 Testing approach.
 - **Default**: `affected`
 - **Options**:
@@ -96,36 +59,21 @@ Testing approach.
   - `smart`: Affected packages + dependencies (balanced)
 - **Example**: `--test-strategy full`
 
-### `--test-on-severity <levels>`
-Only test when fixing certain severities.
-- **Default**: `all`
-- **Options**: `critical,high`, `critical`, `all`, `none`
-- **Example**: `--test-on-severity critical,high`
-
-### `--test-timeout <seconds>`
+#### `--test-timeout <seconds>`
 Maximum seconds per test run.
 - **Default**: `300` (5 minutes)
 - **Example**: `--test-timeout 600`
 
-### `--skip-tests-for <extensions>`
-Skip tests if only these file types changed.
-- **Default**: `.md,.yml,.yaml,.json,.txt`
-- **Example**: `--skip-tests-for .md,.rst,.adoc`
-
-### `--test-before-fix`
-Run tests before making changes to verify CI failure.
-- **Default**: `false`
-- **Example**: `--test-before-fix`
-
-### `--test-command <command>`
-Custom test command (overrides language default).
-- **Example**: `--test-command "npm run test:ci"`
+#### `--parallel-tests`
+Run tests in parallel when supported by test framework.
+- **Default**: `true`
+- **Example**: `--parallel-tests false`
 
 ---
 
-## Fix Strategy
+### Fix Strategy (2)
 
-### `--fix-strategy <strategy>`
+#### `--fix-strategy <strategy>`
 Fix approach and aggressiveness.
 - **Default**: `balanced`
 - **Options**:
@@ -134,267 +82,293 @@ Fix approach and aggressiveness.
   - `aggressive`: Attempt all fixes (50%+), attempt complex refactors
 - **Example**: `--fix-strategy conservative`
 
-### `--max-fixes-per-tier <n>`
-Limit fixes per severity tier.
-- **Default**: Unlimited
-- **Example**: `--max-fixes-per-tier 10`
-
-### `--auto-commit-on-success`
-Auto-commit each tier if tests pass.
-- **Default**: `true`
-- **Example**: `--auto-commit-on-success false`
-
-### `--dry-run`
+#### `--dry-run`
 Preview issues without making any fixes.
 - **Default**: `false`
 - **Example**: `--dry-run`
 
 ---
 
-## Safety Features (NEW!)
+### Safety (2)
 
-### `--require-review-before-push`
-Show diff and require confirmation before pushing.
-- **Default**: `false`
-- **Example**: `--require-review-before-push`
-- **Behavior**: Shows full diff and asks "Push these changes? (y/N)"
+#### `--max-files-changed <n>`
+Abort if changes exceed this limit (safety check for runaway changes).
+- **Default**: Unlimited
+- **Example**: `--max-files-changed 20`
 
-### `--protect-branches <list>`
+#### `--protect-branches <list>`
 Never push to these branches (comma-separated).
 - **Default**: `main,master,production`
 - **Example**: `--protect-branches main,master,prod,release`
-- **Behavior**: Aborts with error if trying to push to protected branch
-
-### `--max-files-changed <n>`
-Abort if changes exceed this limit.
-- **Default**: Unlimited
-- **Example**: `--max-files-changed 20`
-- **Behavior**: Safety check to prevent runaway changes
-
-### `--check-conflicts-before-fix`
-Detect merge conflicts before starting fixes.
-- **Default**: `true`
-- **Example**: `--check-conflicts-before-fix false`
-- **Behavior**: Aborts PR if merge conflicts detected
-
-### `--create-rollback-branch`
-Create backup branch before making fixes.
-- **Default**: `false`
-- **Example**: `--create-rollback-branch`
-- **Behavior**: Creates `warden-rollback-PR#-TIMESTAMP` branch
-
-### `--respect-rate-limits`
-Auto-throttle GitHub API calls to respect rate limits.
-- **Default**: `true`
-- **Example**: `--respect-rate-limits false`
 
 ---
 
-## PR Integration
+### PR Integration (1)
 
-### `--comment-on-pr`
+#### `--comment-on-pr`
 Post findings as PR comment.
 - **Default**: `false`
 - **Example**: `--comment-on-pr`
 
-### `--comment-template <path>`
-Custom comment template file.
-- **Example**: `--comment-template .github/warden-comment.md`
+---
 
-### `--update-comment`
-Update existing comment instead of adding new.
-- **Default**: `false`
-- **Example**: `--update-comment`
+### Performance (1)
 
-### `--auto-label`
-Add labels to PR based on findings.
-- **Default**: `false`
-- **Example**: `--auto-label`
-- **Labels**: `warden-security`, `warden-performance`, `warden-needs-tests`
-
-### `--label-prefix <prefix>`
-Prefix for auto-generated labels.
-- **Default**: `warden-`
-- **Example**: `--label-prefix bot-`
+#### `--max-parallel-prs <n>`
+Max concurrent PR analysis (batching).
+- **Default**: `5`
+- **Example**: `--max-parallel-prs 10`
+- **Note**: Prevents system overload and API rate limiting
 
 ---
 
-## Performance & Limits
+### Workspace (1)
 
-### `--max-parallel-prs <n>`
-Max concurrent PR analysis.
-- **Default**: `10`
-- **Example**: `--max-parallel-prs 20`
-
-### `--max-parallel-agents <n>`
-Max total concurrent subagents.
-- **Default**: Unlimited (determined by reviewers × PRs)
-- **Example**: `--max-parallel-agents 15`
-
-### `--cache-pr-data <seconds>`
-Cache PR metadata for N seconds.
-- **Default**: `0` (no caching)
-- **Example**: `--cache-pr-data 3600` (1 hour)
-
-### `--cache-location <path>`
-Where to store cached data.
-- **Default**: `.warden/cache/`
-- **Example**: `--cache-location /tmp/warden-cache/`
-
----
-
-## Workspace Management
-
-### `--keep-workspace`
+#### `--keep-workspace`
 Don't clean up workspace (for debugging).
 - **Default**: `false`
 - **Example**: `--keep-workspace`
 
-### `--workspace-dir <path>`
-Custom workspace location.
-- **Default**: `/tmp/pr-review-*`
-- **Example**: `--workspace-dir /custom/workspace`
-
-### `--reuse-workspace`
-Reuse workspace across PRs from same repo.
-- **Default**: `false`
-- **Example**: `--reuse-workspace`
-
 ---
 
-## Output & Reporting
+### Output (2)
 
-### `--output-format <format>`
+#### `--output-format <format>`
 Summary report format.
 - **Default**: `text`
 - **Options**: `text`, `json`, `markdown`, `html`
 - **Example**: `--output-format json`
 
-### `--save-report <path>`
-Save summary to file.
-- **Default**: Console only
-- **Example**: `--save-report warden-report.md`
-
-### `--verbose`
+#### `--verbose`
 Detailed logging.
 - **Default**: `false`
 - **Example**: `--verbose`
 
-### `--quiet`
-Minimal output.
-- **Default**: `false`
-- **Example**: `--quiet`
-
-### `--severity <level>`
-Only show issues at or above this level.
-- **Default**: Show all
-- **Options**: `critical`, `high`, `medium`, `low`
-- **Example**: `--severity high`
-
-### `--save-metrics <path>`
-Track metrics over time.
-- **Default**: Disabled
-- **Example**: `--save-metrics .warden/metrics.json`
-- **Tracks**: PRs reviewed, issues found, fixes applied, success rate
-
 ---
 
-## Language & Tooling
+### Language & Tooling (3)
 
-### `--language <lang>`
+#### `--language <lang>`
 Force language detection.
 - **Default**: Auto-detect
 - **Options**: `go`, `python`, `javascript`, `typescript`, `rust`
 - **Example**: `--language go`
 
-### `--formatter <command>`
-Custom formatter command.
-- **Overrides**: Language default
+#### `--formatter <command>`
+Custom formatter command (overrides language default).
 - **Example**: `--formatter "black --line-length 100"`
 
-### `--linter <command>`
-Custom linter command.
+#### `--linter <command>`
+Custom linter command (overrides language default).
 - **Example**: `--linter "eslint --fix"`
-
-### `--skip-generated`
-Automatically skip generated files.
-- **Default**: `true`
-- **Patterns**: `*.pb.go`, `*_generated.*`, `dist/`, `build/`
-- **Example**: `--skip-generated false`
 
 ---
 
-## File Filtering
+### File Filtering (2)
 
-### `--ignore-paths <patterns>`
+#### `--ignore-paths <patterns>`
 Skip paths in review (comma-separated).
 - **Default**: `vendor/,node_modules/,*.pb.go,*_generated.go,dist/,build/`
 - **Example**: `--ignore-paths "third_party/,generated/"`
 
-### `--focus-paths <patterns>`
+#### `--focus-paths <patterns>`
 Only review these paths (comma-separated).
 - **Example**: `--focus-paths "src/,cmd/"`
 
-### `--max-file-size <lines>`
+---
+
+## Advanced/Experimental Parameters (19)
+
+These parameters may be useful in specific scenarios but aren't core to v1.2. Some may be promoted to core or removed based on real-world usage.
+
+### Safety (Extended)
+
+#### `--require-review-before-push`
+Show diff and require confirmation before pushing.
+- **Default**: `false`
+- **Use case**: Extra safety for sensitive repos
+
+#### `--check-conflicts-before-fix`
+Detect merge conflicts before starting fixes.
+- **Default**: `true`
+
+#### `--create-rollback-branch`
+Create backup branch before making fixes.
+- **Default**: `false`
+- **Creates**: `warden-rollback-PR#-TIMESTAMP` branch
+
+---
+
+### PR Integration (Extended)
+
+#### `--comment-template <path>`
+Custom comment template file.
+- **Example**: `--comment-template .github/warden-comment.md`
+
+#### `--update-comment`
+Update existing comment instead of adding new.
+- **Default**: `false`
+
+#### `--auto-label`
+Add labels to PR based on findings.
+- **Default**: `false`
+- **Labels**: `warden-security`, `warden-performance`, `warden-needs-tests`
+
+#### `--label-prefix <prefix>`
+Prefix for auto-generated labels.
+- **Default**: `warden-`
+
+---
+
+### Test Strategy (Extended)
+
+#### `--test-on-severity <levels>`
+Only test when fixing certain severities.
+- **Default**: `all`
+- **Example**: `--test-on-severity critical,high`
+
+#### `--skip-tests-for <extensions>`
+Skip tests if only these file types changed.
+- **Default**: `.md,.yml,.yaml,.json,.txt`
+
+---
+
+### Fix Strategy (Extended)
+
+#### `--max-fixes-per-tier <n>`
+Limit fixes per severity tier.
+- **Default**: Unlimited
+
+#### `--auto-commit-on-success`
+Auto-commit each tier if tests pass.
+- **Default**: `true`
+
+---
+
+### Workspace (Extended)
+
+#### `--workspace-dir <path>`
+Custom workspace location.
+- **Default**: `/tmp/pr-review-*`
+
+#### `--reuse-workspace`
+Reuse workspace across PRs from same repo.
+- **Default**: `false`
+
+---
+
+### Output (Extended)
+
+#### `--save-report <path>`
+Save summary to file.
+- **Example**: `--save-report warden-report.md`
+
+#### `--quiet`
+Minimal output.
+- **Default**: `false`
+
+#### `--severity <level>`
+Only show issues at or above this level.
+- **Options**: `critical`, `high`, `medium`, `low`
+
+---
+
+### File Filtering (Extended)
+
+#### `--max-file-size <lines>`
 Skip files larger than N lines.
 - **Default**: Unlimited
-- **Example**: `--max-file-size 5000`
+
+#### `--skip-generated`
+Automatically skip generated files.
+- **Default**: `true`
+- **Patterns**: `*.pb.go`, `*_generated.*`, `dist/`, `build/`
 
 ---
 
-## Integration Hooks
+### Advanced Options
 
-### `--notify-slack <webhook-url>`
-Send summary to Slack.
-- **Example**: `--notify-slack https://hooks.slack.com/...`
-
-### `--update-jira <ticket-id>`
-Update Jira ticket with findings.
-- **Example**: `--update-jira PROJ-123`
-
-### `--webhook <url>`
-POST summary JSON to webhook.
-- **Example**: `--webhook https://api.example.com/pr-review`
-
----
-
-## Advanced Options
-
-### `--review-rules <path>`
+#### `--review-rules <path>`
 Custom review rules YAML file.
 - **Default**: `.warden-rules.yml` (if exists)
-- **Example**: `--review-rules custom-rules.yml`
 
-### `--diff-context <lines>`
+#### `--diff-context <lines>`
 Lines of context in diffs.
 - **Default**: `3`
-- **Example**: `--diff-context 5`
 
-### `--cache-analysis`
-Cache CI logs and review comments.
-- **Default**: `false`
-- **Duration**: 1 hour
-- **Example**: `--cache-analysis`
-
-### `--incremental-review`
+#### `--incremental-review`
 Only review files changed since last Warden run.
 - **Default**: `false`
-- **Example**: `--incremental-review`
 
-### `--include-drafts`
+#### `--include-drafts`
 Include draft PRs in review.
 - **Default**: `false`
-- **Example**: `--include-drafts`
 
-### `--draft-strategy <strategy>`
+#### `--draft-strategy <strategy>`
 How to handle draft PRs.
 - **Default**: `review-only`
 - **Options**: `review-only`, `fix`, `skip`
-- **Example**: `--draft-strategy skip`
 
-### `--baseline-commit <sha>`
+#### `--baseline-commit <sha>`
 Review changes since this commit.
 - **Example**: `--baseline-commit abc123`
+
+---
+
+## Removed from v1.2
+
+The following parameters were removed to simplify the API and avoid premature optimization. They may return in v2.0 based on real-world demand.
+
+### Caching (7 parameters removed)
+**Rationale**: Premature optimization. Implement with smart defaults when needed.
+- `--cache-pr-data <seconds>`
+- `--cache-location <path>`
+- `--cache-analysis`
+- `--cache-ttl <seconds>` (not in v1.1, speculative)
+- And related caching params
+
+**Alternative**: Warden will implement intelligent caching transparently when beneficial.
+
+---
+
+### Integration Hooks (3 parameters removed)
+**Rationale**: YAGNI for v1.2. These add complexity without proven demand.
+- `--notify-slack <webhook>`
+- `--update-jira <ticket-id>`
+- `--webhook <url>`
+
+**Alternative**: For v1.2, use `--output-format json` and pipe to external tools. May return in v2.0.
+
+---
+
+### Review Over-Parameterization (8 parameters removed)
+**Rationale**: Consolidated into single `--reviewers` parameter for natural language expressibility.
+
+Removed:
+- `--review-depth <standard|thorough|comprehensive>`
+- `--reviewer-count <n>`
+- `--review-focus <area>`
+- And related review configuration params
+
+**Alternative**: Use `--reviewers security,performance,testing` or natural language ("use comprehensive review").
+
+---
+
+### Testing (2 parameters removed)
+**Rationale**: Should always test before pushing; test commands discovered from repo docs.
+
+Removed:
+- `--test-before-fix` - Tests always run before pushing (validation sequence)
+- `--test-command <command>` - Discovered from CLAUDE.md, CI config, or language defaults
+
+**Alternative**: See [docs/COMMANDS.md](COMMANDS.md) for command discovery process.
+
+---
+
+### Other Removals
+- `--save-metrics <path>` - Premature optimization, no proven use case
+- `--respect-rate-limits` - Always respected, no need for flag
+- `--max-parallel-agents <n>` - Calculated automatically based on reviewers × PRs
 
 ---
 
@@ -402,14 +376,28 @@ Review changes since this commit.
 
 When multiple parameters conflict:
 
-1. `--reviewers` (explicit list) > `--reviewer-count` > `--review-depth`
-2. `--test-strategy none` overrides `--test-on-severity`
-3. `--focus-paths` applied before `--ignore-paths`
-4. `--dry-run` disables all fix operations
+1. `--focus-paths` applied before `--ignore-paths`
+2. `--dry-run` disables all fix operations
+3. `--test-strategy none` overrides `--test-on-severity`
+
+---
+
+## Migration from v1.1
+
+If you were using removed parameters:
+
+| Old (v1.1) | New (v1.2) |
+|------------|------------|
+| `--review-depth thorough` | `--reviewers security,performance` |
+| `--reviewer-count 3` | `--reviewers security,performance,architecture` |
+| `--test-command "npm test"` | Add to CLAUDE.md: `Test: \`npm test\`` |
+| `--cache-pr-data 3600` | Removed (smart defaults) |
+| `--notify-slack <url>` | Use `--output-format json \| your-script` |
+
+---
 
 ## See Also
 
-- **Quick examples**: [EXAMPLES.md](EXAMPLES.md)
-- **Detailed workflow**: [WORKFLOW.md](WORKFLOW.md)
-- **Safety features**: [SAFETY.md](SAFETY.md)
-- **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- **Command discovery**: [COMMANDS.md](COMMANDS.md)
+- **Workflow details**: [WORKFLOW.md](WORKFLOW.md)
+- **Natural language examples**: See README.md

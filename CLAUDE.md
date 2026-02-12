@@ -15,7 +15,7 @@ User must explicitly reference "Warden" for Claude to use this skill:
 
 ## About Warden
 
-Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (50+ parameters), and platform-specific optimizations.
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, streamlined configuration (23 core parameters), and platform-specific optimizations.
 
 **Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md for details).
 

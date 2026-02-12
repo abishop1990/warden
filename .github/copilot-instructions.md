@@ -4,7 +4,7 @@
 
 Warden v1.2: Cross-platform AI skill for automated PR review and fixes.
 
-**New in v1.2**: Contextual review, 50+ configuration parameters, 5 specialized reviewers, flexible test strategies, PR integration, external webhooks.
+**New in v1.2**: Contextual review, streamlined configuration (23 core parameters), 5 specialized reviewers, flexible test strategies, PR integration.
 
 **Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md).
 
@@ -50,17 +50,16 @@ cp -r ~/warden/docs /path/to/project/docs/
 # Update: cd ~/warden && git pull
 ```
 
-### Key Parameters (40+ available - see README.md)
+### Key Parameters (23 core + 19 advanced - see PARAMETERS.md)
 - `--author <username>` - Review PRs by specific author
 - `--repo <owner/repo>` - Target specific repository
 - `--reviewers security,performance,architecture` - Custom reviewers
 - `--test-strategy none|affected|full|smart` - Test approach
 - `--fix-strategy conservative|balanced|aggressive` - Fix aggressiveness
 - `--comment-on-pr` - Post findings to PR
-- `--notify-slack <webhook>` - Send summary to Slack
 - `--dry-run` - Preview without fixing
 
-See README.md for complete parameter reference.
+See [PARAMETERS.md](../docs/PARAMETERS.md) for complete parameter reference.
 
 ## Workflow
 
