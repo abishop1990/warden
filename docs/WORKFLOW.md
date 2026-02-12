@@ -243,9 +243,48 @@ What would you like to fix?
 
 ## Phase 5: Execution (Incremental with Validation)
 
-**Key Optimization**: Fix by severity tier, validate, push, then continue.
+**Key Principle**: Each PR gets its own isolated temporary workspace. All work happens there, then it's cleaned up.
 
 **CRITICAL**: See [VALIDATION-ORDER.md](VALIDATION-ORDER.md) for mandatory validation sequence.
+
+### High-Level Loop Structure
+
+```
+FOR EACH PR (that user selected to fix):
+
+  1. Create isolated temp workspace: /tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/
+     ↓
+  2. Clone repo into this workspace (shallow clone for speed)
+     ↓
+  3. Checkout the PR's branch (verified from GitHub API)
+     ↓
+  4. Do ALL work in this isolated workspace:
+     - Fix Critical tier → Build → Lint → Format → Test → Commit → Push
+     - Fix High tier → Build → Lint → Format → Test → Commit → Push
+     - Fix Medium tier → Build → Lint → Format → Test → Commit → Push
+     - Fix Low tier → Build → Lint → Format → Test → Commit → Push
+     ↓
+  5. Verify CI started
+     ↓
+  6. **Clean up THIS workspace completely**
+     - rm -rf /tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/
+     - Verify cleanup succeeded
+     ↓
+  7. Move to NEXT PR (repeat from step 1)
+
+END LOOP
+
+After all PRs processed:
+  - Verify no lingering workspaces exist
+  - Report summary
+```
+
+**Important**:
+- Each PR is completely isolated from others
+- Your original working directory is NEVER modified
+- All changes happen in temp workspaces
+- Workspaces are cleaned up immediately after each PR
+- No shared state between PRs
 
 ### 5.1 Setup Workspace (Optimized with Branch Verification)
 
@@ -539,7 +578,11 @@ fi
 
 ### 5.3 Cleanup (Verified)
 
-**IMPORTANT**: Cleanup must complete successfully to avoid disk space issues.
+**CRITICAL**: Every workspace MUST be cleaned up after its PR is processed.
+
+**When**: Immediately after pushing changes (or aborting) for this PR, BEFORE moving to next PR.
+
+**Why**: Prevents disk space issues and ensures no state leakage between PRs.
 
 ```bash
 # Synchronous cleanup per tier - ensures completion
@@ -637,6 +680,61 @@ Next Steps:
 - Shallow clones: 5-10x faster workspace setup
 - Targeted testing: 3-5x faster test execution
 - Batch API calls: 3x faster Phase 1
+
+---
+
+---
+
+## Workspace Lifecycle Summary
+
+**For absolute clarity on workspace isolation**:
+
+```
+User runs: warden (from /Users/you/myproject)
+
+Warden finds 3 PRs to fix: #123, #125, #127
+
+┌─────────────────────────────────────────────────────┐
+│ PR #123                                             │
+├─────────────────────────────────────────────────────┤
+│ 1. Create: /tmp/pr-review-123-1701234567/           │
+│ 2. Clone repo into that directory                   │
+│ 3. Checkout PR #123 branch                          │
+│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
+│ 5. Delete: /tmp/pr-review-123-1701234567/           │
+└─────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────┐
+│ PR #125                                             │
+├─────────────────────────────────────────────────────┤
+│ 1. Create: /tmp/pr-review-125-1701234890/           │
+│ 2. Clone repo into that directory                   │
+│ 3. Checkout PR #125 branch                          │
+│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
+│ 5. Delete: /tmp/pr-review-125-1701234890/           │
+└─────────────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────────────┐
+│ PR #127                                             │
+├─────────────────────────────────────────────────────┤
+│ 1. Create: /tmp/pr-review-127-1701235123/           │
+│ 2. Clone repo into that directory                   │
+│ 3. Checkout PR #127 branch                          │
+│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
+│ 5. Delete: /tmp/pr-review-127-1701235123/           │
+└─────────────────────────────────────────────────────┘
+
+Final check: Verify no /tmp/pr-review-* directories remain
+
+User's /Users/you/myproject: UNCHANGED, UNTOUCHED
+```
+
+**Key points**:
+- Each PR is processed sequentially (not in parallel for workspace safety)
+- Each PR gets a fresh, isolated workspace
+- Workspace is deleted immediately after that PR is done
+- Your working directory is never involved
+- No state leakage between PRs
 
 ---
 

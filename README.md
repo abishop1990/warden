@@ -16,8 +16,10 @@ Warden is an AI coding assistant skill that analyzes CI failures, review comment
 
 ## Features
 
+- **Isolated Workspaces**: Each PR in its own temp directory - never modifies your working directory
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
 - **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
+- **Complete Validation**: Build + Lint + Test before every push (prevents CI failures)
 - **Fully Configurable**: 50+ parameters for review depth, testing, fixes, output, and integrations
 - **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
 - **Flexible Test Strategies**: none/affected/full/smart with granular control

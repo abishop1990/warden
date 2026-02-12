@@ -4,10 +4,30 @@ Warden includes multiple safety mechanisms to prevent unintended changes and pro
 
 ## Built-in Safety (Always Active)
 
-### 1. Isolated Workspaces
-- **Never modifies your working directory**
-- All changes happen in `/tmp/pr-review-*`
-- Original code remains untouched
+### 1. Isolated Workspaces (CRITICAL Safety Feature)
+
+**How it works**:
+- Each PR gets its own isolated temp workspace: `/tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/`
+- Your original working directory is NEVER touched
+- All fixes, builds, tests happen in the isolated workspace
+- Workspace is completely removed after the PR is processed
+
+**Safety guarantees**:
+- ✅ Original code remains untouched
+- ✅ No risk of corrupting your working directory
+- ✅ Each PR is completely isolated from others
+- ✅ Failed fixes don't affect your local code
+- ✅ You can continue working while Warden runs
+
+**Example workflow**:
+```bash
+# Your working directory: /Users/you/myproject
+# Warden creates: /tmp/pr-review-123-1234567890/
+# Does all work there
+# Pushes changes to remote
+# Deletes: /tmp/pr-review-123-1234567890/
+# Your /Users/you/myproject is unchanged
+```
 
 ### 2. Branch Verification
 - **Verifies PR branch before checkout**
