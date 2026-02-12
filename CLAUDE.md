@@ -411,10 +411,19 @@ When making significant changes to Warden (new features, workflow changes, enfor
 - Add new documentation references to appropriate sections
 - **Avoid bloat**: Don't duplicate detailed parameter/configuration info (belongs in PARAMETERS.md, CONFIGURATION.md, EXAMPLES.md)
 
-**Check for context bloat**:
+**Check for context bloat (but preserve enforcement)**:
 - Detailed configuration examples → Move to EXAMPLES.md or PARAMETERS.md
 - Technical implementation details → Move to platform-specific docs (CLAUDE.md, AGENTS.md)
 - Verbose explanations → Keep README concise, link to detailed docs
+
+**⚠️ CRITICAL: What is NOT bloat**:
+- **Explicit enforcement instructions** - MANDATORY steps, BLOCKING checks, verification requirements
+- **Required command sequences** - Phase 0 artifact creation, validation order, pre-commit checks
+- **Error conditions** - What triggers rollback, what causes failures
+- **"MUST" requirements** - These prevent agents from skipping steps
+- **Verification scripts** - Concrete examples of checks to perform
+
+**Principle**: If removing it would let an agent skip a step or misinterpret requirements, it's NOT bloat - it's enforcement. Bloat is redundant explanations and verbose examples, not mechanical requirements.
 
 **README should contain**:
 - Overview (what, why, how)
