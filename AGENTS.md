@@ -2,6 +2,26 @@
 
 This file provides unified instructions for all AI coding assistants working with the Warden PR review and fix skill.
 
+## CRITICAL: Execution Mode
+
+**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
+
+**What you do**:
+- ✅ Checkout existing PR branches in temp workspaces
+- ✅ Run actual build/lint/format/test commands
+- ✅ Check exit codes (0 = pass, non-zero = fail)
+- ✅ Fix failures when commands fail
+- ✅ Push fixes back to the PR
+
+**What you DON'T do**:
+- ❌ Abstract "review against principles" analysis
+- ❌ Manual inspection without running tools
+- ❌ Conceptual suggestions without hands-on fixes
+
+See [docs/COMMANDS.md](docs/COMMANDS.md) for exact commands to execute per language.
+
+---
+
 ## About Warden
 
 Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. Version 1.2 features:

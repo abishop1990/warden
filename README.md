@@ -92,6 +92,7 @@ warden \
 
 ### Detailed Guides
 
+- **[COMMANDS.md](docs/COMMANDS.md)** - **Exact commands to execute** (not conceptual review!)
 - **[PARAMETERS.md](docs/PARAMETERS.md)** - Complete reference for all 50+ parameters
 - **[WORKFLOW.md](docs/WORKFLOW.md)** - How Warden works, phase by phase
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Real-world usage examples for every scenario

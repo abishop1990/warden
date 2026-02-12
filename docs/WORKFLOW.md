@@ -254,6 +254,14 @@ What would you like to fix?
 
 **CRITICAL**: See [VALIDATION-ORDER.md](VALIDATION-ORDER.md) for mandatory validation sequence.
 
+**IMPORTANT - Execution Mode**:
+- This is NOT a conceptual review - you actually RUN commands
+- Checkout the PR branch in a temp workspace
+- Execute build/lint/format/test commands and check exit codes
+- Make fixes if commands fail
+- Push fixes back to the PR
+- This is hands-on execution, not abstract analysis
+
 ### High-Level Loop Structure
 
 ```
