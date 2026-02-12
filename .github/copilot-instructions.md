@@ -32,6 +32,24 @@ User must explicitly reference "Warden" for GitHub Copilot to use this skill.
 - Say "Run Warden" in Copilot Chat
 - Copilot follows the workflow documented here
 
+**Installation (Current Workarounds - 2026-02)**:
+
+Ideal (when Copilot skills system is stable):
+```bash
+gh copilot skill add https://github.com/abishop1990/warden
+```
+
+Current workarounds:
+```bash
+# Option 1: Copy to project
+cp ~/warden/AGENTS.md /path/to/project/.github/
+cp -r ~/warden/docs /path/to/project/docs/
+
+# Option 2: Keep Warden in workspace (add as workspace folder)
+
+# Update: cd ~/warden && git pull
+```
+
 ### Key Parameters (40+ available - see README.md)
 - `--author <username>` - Review PRs by specific author
 - `--repo <owner/repo>` - Target specific repository
@@ -48,15 +66,13 @@ See README.md for complete parameter reference.
 
 **CRITICAL**: This skill works with **Pull Requests (PRs)**, NOT branches!
 
-1. **Discovery** - Batch `gh pr list --json` (single API call)
-   - ✅ Use: `gh pr list --author @me --state open --json number,title,statusCheckRollup,reviews,updatedAt`
-   - ❌ DON'T: `git branch --list` (this lists branches, not PRs!)
-   - **Scope**: If >10 PRs, auto-select top 10 by priority (Failing CI > Review comments > Recent) and inform user
+1. **Discovery** - Batch `gh pr list --json` (auto-select top 10 by priority if >10 found)
 2. **Analysis** - Parallel analysis of all PRs (CI, reviews, code quality)
-3. **Planning** - Deduplicate, prioritize by severity
-4. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
-5. **Execution** - Incremental fixes (Critical → High → Medium → Low)
-6. **Summary** - Comprehensive report
+3. **Validation** - Verify branch integrity, detect corruption/architectural issues
+4. **Planning** - Aggregate, deduplicate, prioritize, flag escalations
+5. **User Interaction** - **MANDATORY: Report with metadata, ask approval, WAIT**
+6. **Execution** - Fix or escalate (architectural issues flagged for user)
+7. **Summary** - Report metrics
 
 See [docs/WORKFLOW.md](../docs/WORKFLOW.md) for complete workflow details.
 

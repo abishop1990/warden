@@ -59,19 +59,15 @@ AI assistants need explicit reference to "Warden" to use this skill:
 
 ## Workflow Overview
 
-6-phase workflow for PR review and automated fixes:
+7-phase workflow for PR review and automated fixes:
 
 1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
-2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing **three issue sources**:
-   - **CI failures** (test failures, build errors, lint issues)
-   - **Review comments** (requested changes, unresolved feedback)
-   - **Code quality** (security, performance, architecture issues)
-   - Context: PR description, repo conventions, codebase architecture
-   - Review depth: standard/thorough/comprehensive
-3. **Planning** - Aggregate all three sources, deduplicate, prioritize by severity
-4. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
-5. **Execution** - Fix all issue types (CI + Review + Code), validate, push
-6. **Summary Report** - Metrics and next steps
+2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing three issue sources (CI/Review/Code)
+3. **Validation** - Verify PR branch integrity (file count, compilation, corruption detection)
+4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
+5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
+6. **Execution** - Fix issues, validate incrementally, push (or escalate if architectural)
+7. **Summary** - Report metrics and next steps
 
 ## Default Configuration
 
@@ -86,7 +82,48 @@ When user doesn't specify parameters, use these defaults:
 - "Run full test suite" → All tests, not just affected
 - "Be conservative with fixes" → High confidence only
 
-## Phase 4: User Interaction (MANDATORY)
+## Phase 3: Validation Pre-Check
+
+**Purpose**: Detect branch corruption and architectural issues before attempting fixes.
+
+**For each PR, verify:**
+1. **Branch integrity**: `git show HEAD --stat | wc -l` vs `gh pr view {num} --json files -q '.files | length'`
+   - If mismatch >20%: Flag as "⚠️ Branch corruption - needs investigation"
+2. **Compilation**: Does PR branch actually compile?
+   - Run language-specific build command
+   - If fails: Analyze whether it's fixable or architectural
+3. **File count anomalies**: Check for 1000+ file changes
+   - Usually indicates merge issues or massive refactoring
+
+**Output classifications:**
+- ✅ **Clean PR**: Files match, compiles, normal scope
+- ⚠️ **Needs Investigation**: File count mismatch, doesn't compile
+- 🚨 **Architectural Issue**: Design problems beyond simple fixes (escalate to user)
+
+**Example**:
+```bash
+# Check file count match
+LOCAL_FILES=$(git show HEAD --stat | wc -l)
+GH_FILES=$(gh pr view 3875 --json files -q '.files | length')
+if [ $((GH_FILES - LOCAL_FILES)) -gt $((LOCAL_FILES / 5)) ]; then
+  echo "⚠️ File count mismatch: Local=$LOCAL_FILES, GitHub=$GH_FILES"
+fi
+```
+
+## Phase 4: Planning
+
+**Aggregate findings** from Phase 2 (Analysis) and Phase 3 (Validation).
+
+**Categorize by severity** and **identify escalation triggers**:
+- Fix requires API changes (adding fields, changing signatures)
+- Fix requires >100 LOC changes
+- Test failures reveal design issues (not just typos)
+- Multi-tenant or cross-cutting concerns involved
+- Branch corruption detected in Phase 3
+
+**Output**: Structured issue list with severity, complexity, escalation flags.
+
+## Phase 5: User Interaction (MANDATORY)
 
 **CRITICAL**: Before executing ANY fixes, you MUST:
 
@@ -124,7 +161,84 @@ When user doesn't specify parameters, use these defaults:
    - User may want to exclude certain PRs or issue types
    - User may want to adjust severity thresholds
 
-**Common mistake**: Jumping directly from Phase 3 (Planning) to Phase 5 (Execution) without user approval. This violates the safety-first design and may make unwanted changes.
+**Enhanced report format** (include metadata):
+```
+=== Warden Analysis Report ===
+
+Analysis Metadata:
+- PRs analyzed: 14
+- Analysis time: ~12 minutes
+- Subagents launched: 42 (3 per PR × 14)
+- Anomalies detected: 1 (PR #3875 file count mismatch)
+
+Priority Distribution:
+- 🚨 Critical (CI failures): 3 PRs
+- ⚠️ High (breaking changes): 2 PRs
+- ℹ️ Medium (refactors): 5 PRs
+- ✅ Clean (ready to merge): 4 PRs
+
+Issues Found:
+
+PR #123: Feature XYZ
+├─ Critical (2): [Issue IDs with file:line]
+├─ High (3): [Issue IDs with file:line]
+└─ Medium (1): [Issue IDs with file:line]
+
+Escalations Required:
+- PR #3875: Architectural issue (incomplete multi-tenant refactoring)
+```
+
+**Common mistake**: Jumping directly from Planning to Execution without user approval.
+
+## Phase 6: Execution
+
+**Auto-fix** simple issues, **escalate** complex/architectural ones.
+
+**Escalation Triggers** (do NOT auto-fix, present to user):
+1. Fix requires API changes (adding fields, changing method signatures)
+2. Fix requires >100 LOC changes
+3. Test failures reveal design issues (not just typos/formatting)
+4. Multi-tenant or cross-cutting concerns involved
+5. Branch corruption detected (file count mismatch, won't compile)
+
+**Escalation Template**:
+```
+🚨 ESCALATION REQUIRED: PR #{number}
+
+Root Cause: [What actually happened - git history investigation]
+Problem: [Design issue, not simple bug]
+Investigation: [Git log analysis, affected components]
+
+Fix Options:
+1. [Option A] - [Trade-offs]
+2. [Option B] - [Trade-offs]
+
+Recommendation: [Preferred approach with rationale]
+```
+
+**For fixable issues**: Apply fixes incrementally by severity tier, validate, push.
+
+## Git History Investigation
+
+**When to investigate**: Branch corruption, unexpected failures, architectural issues.
+
+**Standard investigation workflow**:
+```bash
+# 1. Compare local commit vs GitHub PR
+LOCAL_FILES=$(git show HEAD --stat | wc -l)
+GH_FILES=$(gh pr view {num} --json files -q '.files | length')
+
+# 2. Check for merge issues
+git log --oneline --graph HEAD~10..HEAD
+
+# 3. Find original implementation
+git log --all -S "function_name" -- path/to/file
+
+# 4. Check recent changes to affected files
+git log -p --follow -- path/to/file | head -100
+```
+
+**Document findings** in Phase 5 report for user review.
 
 ## Key Optimizations
 
@@ -174,56 +288,6 @@ When user doesn't specify parameters, use these defaults:
 - **Status**: Unknown - needs testing
 - **Recommendation**: Document findings after testing
 
-## Platform-Specific Invocation
-
-### Claude Code
-```
-Review and fix PRs using the pr-review-and-fix workflow [OPTIONS]
-```
-
-**Common options**:
-- `--reviewers security,performance` - Custom reviewers
-- `--test-strategy affected|full|none` - Test approach
-- `--fix-strategy conservative|balanced|aggressive` - Fix aggressiveness
-- `--comment-on-pr` - Post findings to PR
-- `--dry-run` - Preview only
-
-**Implementation**:
-- Use `general-purpose` agents for Phase 2 analysis (all in parallel, 3-5 per PR depending on config)
-- Gather context: PR description + CLAUDE.md/AGENTS.md + codebase overview
-- Use `Plan` agent for Phase 3 aggregation
-- Use `Bash` agent for moderate fixes, `general-purpose` for complex fixes
-- Respect all configuration parameters
-
-### GitHub Copilot
-```
-"Run the Warden skill"
-"Execute Warden on my PRs"
-```
-- Use `gh` CLI for all GitHub operations
-- Leverage GitHub integration for CI insights
-- Copilot reads `.github/copilot-instructions.md` automatically
-
-### Cursor
-```
-"Run the Warden skill"
-"Execute Warden on my pull requests"
-```
-- Use Composer mode for multi-file edits
-- Leverage codebase-wide context
-- Cursor reads `.cursorrules` automatically
-
-## Implementation Guidelines
-
-1. **Use parallel execution** - Launch ALL Phase 2 subagents simultaneously
-2. **Batch API calls** - Single `gh pr list --json` not N sequential calls
-3. **Shallow clone** - `--depth=1` for 5-10x faster workspace setup
-4. **Test targeted** - Only affected packages, not full suite (3-5x faster)
-5. **Incremental fixes** - Fix/test/commit by severity tier, rollback per-tier on failure
-6. **Background cleanup** - Non-blocking workspace removal
-7. **Never modify user's working directory** - Always use `/tmp` workspace
-8. **Provide structured reports** - Severity, complexity, affected files, line numbers
-
 ## Subagent Selection (Complexity-Based)
 
 **Simple** (1-5 lines, single file): Main agent direct edits
@@ -259,26 +323,12 @@ Auto-detect language from changed files, then adapt:
 - Continue to next PR if one fails
 - Collect failures for summary report
 
-## Expected Performance
+## Performance
 
-For 3 PRs (~500 lines changed each):
-
-| Phase | Sequential | Optimized | Improvement |
-|-------|-----------|-----------|-------------|
-| Discovery | 6s | 2s | 3x faster |
-| Analysis | 90s | 35s | 2.5x faster |
-| Planning | 15s | 10s | 1.5x faster |
-| Execution | 180s | 120s | 1.5x faster |
-| **Total** | **291s** | **167s** | **1.7x faster** |
-
-## General Guidelines
-
-- Always confirm destructive actions with user
-- Provide dry-run options (`--dry-run` parameter)
-- Document all changes in detailed commit messages
-- Follow repository-specific conventions
-- Flag complex/risky changes for manual review
-- Never skip tests - rollback instead
+Parallel execution with batching: **1.2-1.7x faster** than sequential (varies by config).
+- Standard (1 reviewer): 1.7x faster
+- Thorough (2 reviewers): 1.6x faster
+- Comprehensive (3 reviewers): 1.4x faster
 
 ## Full Documentation
 

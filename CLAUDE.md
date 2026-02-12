@@ -242,110 +242,13 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 
 ### Error Handling
 
-**Graceful degradation**:
-- CI logs unavailable → Skip CI analysis, proceed with review + code analysis
-- Review API fails → Skip review analysis, proceed with CI + code analysis
-- Code diff fails → Skip code analysis, proceed with CI + reviews
-- Test failures → Rollback severity tier, flag for manual review
-
-**Rollback strategies**:
-- **Per-tier**: If High fixes fail tests, rollback only High tier (keep Critical fixes)
-- **Full**: If Critical fixes fail, abort entire PR and flag for manual review
-- **Selective**: If specific fix causes failure, rollback only that commit
-
-**Continue on failure**:
-- If PR #1 fails completely, continue to PR #2
-- Collect all failures for Phase 6 summary report
-- Always clean up workspaces, even on failure
+See AGENTS.md for full error handling and rollback strategies.
 
 ### Git Workflow
 
-**Workspace setup** (with branch verification):
-```bash
-# CRITICAL: Get PR's actual branch name from GitHub API
-PR_BRANCH=$(gh pr view ${PR_NUMBER} --json headRefName --jq '.headRefName')
-if [ -z "$PR_BRANCH" ]; then
-  echo "ERROR: Could not get branch for PR #${PR_NUMBER}"
-  exit 1
-fi
+**Key steps**: Get PR branch via API → Create temp workspace → `gh pr checkout` → Verify branch → Fix → Test → Commit → Push → Cleanup
 
-WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
-mkdir -p "$WORKSPACE"
-cd "$WORKSPACE"
-
-# Clone and checkout PR (RECOMMENDED - handles verification)
-gh repo clone owner/repo . -- --depth=1
-gh pr checkout ${PR_NUMBER}
-
-# Verify we're on correct branch
-CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "$PR_BRANCH" ]; then
-  echo "ERROR: Branch mismatch! Current: $CURRENT_BRANCH, Expected: $PR_BRANCH"
-  exit 1
-fi
-```
-
-**Commit format**:
-```bash
-git commit -m "[PR #${PR_NUMBER}] Fix: ${SEVERITY} - ${DESCRIPTION}
-
-Fixed ${ISSUE_COUNT} ${SEVERITY} severity issues:
-- [${ISSUE_ID}] ${ISSUE_1_SUMMARY} (${FILE}:${LINE})
-- [${ISSUE_ID}] ${ISSUE_2_SUMMARY} (${FILE}:${LINE})
-
-Tested: ${AFFECTED_PACKAGES}
-
-Co-Authored-By: Warden <noreply@warden.dev>"
-```
-
-**Push and verify**:
-```bash
-git push origin pr-${PR_NUMBER}
-sleep 5  # Wait for CI to start
-gh pr checks ${PR_NUMBER} --watch
-```
-
-**Cleanup**:
-```bash
-# Background cleanup (non-blocking)
-(cd / && rm -rf "$WORKSPACE") &
-```
-
-### Performance Expectations
-
-For 3 PRs with ~500 lines changed each:
-
-- **Phase 1**: 2s (batch API call)
-- **Phase 2**: 35s (9 parallel agents vs 90s sequential)
-- **Phase 3**: 10s (Plan agent aggregation)
-- **Phase 4**: User interaction time (variable)
-- **Phase 5**: 120s (incremental validation vs 180s sequential)
-- **Phase 6**: 5s (summary generation)
-
-**Total** (with default settings):
-- Standard review + affected tests: ~172s (1.7x faster)
-- Thorough review + affected tests: ~187s (1.6x faster)
-- Comprehensive review + full tests: ~240s (1.2x faster)
-
-**Performance varies by configuration**:
-- `--test-strategy none`: Saves 40-60s
-- `--test-strategy full`: Adds 60-120s
-- `--max-parallel-prs 20`: 1.5x faster for large batches
-- `--reuse-workspace`: Saves 5-10s per PR from same repo
-
-### Subagent Selection Decision Tree
-
-```
-Is fix 1-5 lines, single file?
-├─ YES → Main agent (direct edit)
-└─ NO → Is fix 5-20 lines, 1-2 files?
-    ├─ YES → Bash agent (scripted changes)
-    └─ NO → Is fix 20+ lines or multi-file?
-        ├─ YES → general-purpose agent
-        └─ NO → Is fix architectural or >5 files?
-            ├─ YES → Flag for manual review
-            └─ NO → general-purpose agent
-```
+See `.github/copilot-instructions.md` for detailed bash examples.
 
 ### Language-Specific Adaptations
 
@@ -388,57 +291,6 @@ See README.md for complete language-specific command reference.
 15. **Respect parallelization limits** - `--max-parallel-prs` and `--max-parallel-agents`
 16. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
 17. **Send notifications** if webhook/Slack/Jira configured
-
-## Common Mistakes to Avoid
-
-❌ Using `git branch --list` instead of `gh pr list`
-❌ Assuming branch names instead of fetching from PR data
-❌ Pushing to wrong branch without verification
-❌ Trusting cached/session data
-
-✅ Always fetch fresh PR data from GitHub API
-✅ Verify branch matches PR before pushing
-✅ Use `gh pr checkout <number>` for safety
-
-## Example Execution Flow
-
-```
-Phase 1: Discovery
-→ Main agent: gh pr list --json (2s)
-
-Phase 2: Analysis (Parallel)
-→ Task(general-purpose, "CI analysis PR #123")
-→ Task(general-purpose, "Review analysis PR #123")
-→ Task(general-purpose, "Code review PR #123")
-→ Task(general-purpose, "CI analysis PR #125")
-→ Task(general-purpose, "Review analysis PR #125")
-→ Task(general-purpose, "Code review PR #125")
-[All 6 agents run simultaneously: 35s total]
-
-Phase 3: Planning
-→ Task(Plan, "Aggregate findings, deduplicate, prioritize")
-[10s]
-
-Phase 4: User Interaction
-→ Main agent: Present report, get user selection
-[User time]
-
-Phase 5: Execution (PR #123)
-→ Setup workspace (shallow clone: 5s)
-→ Fix Critical tier (main agent: 2 simple fixes)
-→ Test Critical (targeted: 8s)
-→ Commit + Push Critical
-→ Fix High tier (Bash agent: 3 moderate fixes)
-→ Test High (targeted: 12s)
-→ Commit + Push High
-→ Cleanup (background)
-[~30s per PR]
-
-Phase 6: Summary
-→ Main agent: Generate report (5s)
-```
-
-**Total: ~172s for 3 PRs**
 
 ## Available Information
 
