@@ -17,6 +17,16 @@ Thumbs.db
 *.temp
 /tmp/
 
+# Debug files (prevent accidental commit)
+*_debug.*
+test_debug.*
+debug_*.*
+*.debug
+.debug/
+
+# Warden workspace artifacts
+.warden-validation-commands.sh
+
 # Logs
 *.log
 

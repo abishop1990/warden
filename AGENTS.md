@@ -312,10 +312,16 @@ echo "  TEST:   ${TEST_CMD:-[skip]}"
 3. Run `$LINT_CMD` → exit code != 0? Rollback, abort tier
 4. Run `$FORMAT_CMD` → auto-fix styling
 5. Run `$TEST_CMD` → exit code != 0? Rollback, abort tier
-6. Commit (only if all validations passed)
-7. Push (only after commit)
+6. **PRE-COMMIT VERIFICATION** (MANDATORY):
+   - Stage files: `git add .`
+   - Show staged files: `git status --short`
+   - Check for unintended files (debug, temp, IDE files)
+   - Verify at least one file staged
+   - Abort if unintended files detected
+7. Commit (only if verification passed)
+8. Push (only after commit)
 
-See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for enforcement details.
+See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) and [VALIDATION-ORDER.md](docs/VALIDATION-ORDER.md) for enforcement details.
 
 **Auto-fix** simple issues, **escalate** complex/architectural ones.
 

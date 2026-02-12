@@ -189,8 +189,19 @@ $LINT_CMD   || { rollback; exit 1; }
 $FORMAT_CMD  # auto-fix, ignore errors
 $TEST_CMD   || { rollback; exit 1; }
 
-# Only commit/push if all validations passed
+# PRE-COMMIT VERIFICATION (MANDATORY)
 git add .
+git status --short  # Show what will be committed
+
+# Check for unintended files
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.|debug_.*\.|\.debug$)')
+if [ -n "$UNINTENDED" ]; then
+  echo "❌ ERROR: Unintended files detected"
+  git reset --hard HEAD
+  exit 1
+fi
+
+# Only commit/push if verification passed
 git commit -m "Fix: ${TIER}"
 git push origin $(git branch --show-current)
 ```

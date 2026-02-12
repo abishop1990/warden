@@ -77,18 +77,50 @@ fi
 # Format
 $FORMAT_CMD
 
-# Test
+# 4. Test
 $TEST_CMD
 if [ $? -ne 0 ]; then
   git reset --hard HEAD
   exit 1
 fi
 
-# All passed - commit
+# 5. PRE-COMMIT VERIFICATION (MANDATORY)
+echo "=== Pre-Commit File Verification ==="
+
+# Stage files
 git add .
+
+# Show exactly what will be committed
+echo "Files to be committed:"
+git status --short
+
+# Check for unintended files (debug, temp, IDE files)
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.|debug_.*\.|\.debug$|\.tmp$|\.swp$|\.swo$|~$|\.DS_Store$)')
+
+if [ -n "$UNINTENDED" ]; then
+  echo "❌ ERROR: Unintended files staged for commit:"
+  echo "$UNINTENDED"
+  echo ""
+  echo "These appear to be debug/temp/IDE files."
+  echo "Review .gitignore and unstage with: git reset HEAD <file>"
+  git reset --hard HEAD  # Rollback
+  exit 1
+fi
+
+# Verify only intended files are staged
+STAGED_COUNT=$(git diff --cached --name-only | wc -l)
+if [ $STAGED_COUNT -eq 0 ]; then
+  echo "❌ ERROR: No files staged for commit"
+  exit 1
+fi
+
+echo "✅ Pre-commit verification passed ($STAGED_COUNT files)"
+echo ""
+
+# 6. Commit
 git commit -m "Fix: ${TIER}"
 
-# Push
+# 7. Push
 git push origin $(git branch --show-current)
 
 # Cleanup
@@ -131,6 +163,31 @@ fi
 # Before push - check validation marker
 if [ ! -f "/tmp/warden-tier-${TIER}-validated" ]; then
   echo "❌ ERROR: Cannot push without validation!"
+  exit 1
+fi
+```
+
+**Rule 4: MUST verify staged files before commit**
+```bash
+# After validation passes, before commit
+git add .
+
+# Show what will be committed
+git status --short
+
+# Check for unintended files (debug, temp, IDE)
+UNINTENDED=$(git diff --cached --name-only | grep -E '(_debug\.|test_debug\.|debug_.*\.|\.debug$|\.tmp$|\.swp$)')
+
+if [ -n "$UNINTENDED" ]; then
+  echo "❌ ERROR: Unintended files staged:"
+  echo "$UNINTENDED"
+  git reset --hard HEAD
+  exit 1
+fi
+
+# Verify at least one file staged
+if [ $(git diff --cached --name-only | wc -l) -eq 0 ]; then
+  echo "❌ ERROR: No files staged"
   exit 1
 fi
 ```

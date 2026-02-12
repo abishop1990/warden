@@ -243,8 +243,13 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
   3. Run `$LINT_CMD` → fail? Rollback, abort tier
   4. Run `$FORMAT_CMD` → auto-fix styling
   5. Run `$TEST_CMD` → fail? Rollback, abort tier
-  6. Commit (only if all passed)
-  7. Push (only after commit)
+  6. **PRE-COMMIT VERIFICATION**:
+     - Stage: `git add .`
+     - Show: `git status --short`
+     - Check for unintended files (debug, temp, IDE)
+     - Abort if unintended files detected
+  7. Commit (only if verification passed)
+  8. Push (only after commit)
 
 - **Complexity-based routing**:
 
