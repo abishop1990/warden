@@ -1,0 +1,43 @@
+# Cursor Rules for Warden Skills Repository
+
+## Repository Purpose
+Warden is an open-source collection of cross-platform AI coding assistant skills that work across Claude Code, GitHub Copilot, Cursor, and other AI assistants.
+
+## Project Structure
+- `skills/` contains individual skill definitions
+- Each skill has a `SKILL.md` file with YAML frontmatter
+- `AGENTS.md` contains unified instructions for all AI assistants
+- Platform-specific configs: `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`
+
+## When Working with Skills
+
+### Creating Skills
+1. Create `skills/[skill-name]/SKILL.md`
+2. Include YAML frontmatter with: name, description, version, platforms, tags
+3. Document workflow in clear phases
+4. Add platform-specific usage examples
+5. Include language-specific adaptations where relevant
+
+### Skill Documentation Structure
+- Overview: Brief description of what the skill does
+- Usage: Platform-specific invocation examples
+- Workflow: Step-by-step phases with clear numbering
+- Implementation Notes: Technical details and best practices
+- Language-Specific Adaptations: Commands/tools for different languages
+- Future Enhancements: Ideas for iteration
+
+## General Guidelines
+- Keep skills modular and self-contained
+- Support multiple programming languages
+- Include error handling
+- Document destructive operations clearly
+- Provide dry-run options where applicable
+- Always confirm before making changes to repositories
+
+## Available Skills
+See `AGENTS.md` for the current catalog of skills and their triggers.
+
+## Cursor-Specific Notes
+- Use Cursor's multi-file editing for complex skill implementations
+- Leverage codebase-wide context for understanding existing patterns
+- Test skill workflows in Cursor's composer mode
