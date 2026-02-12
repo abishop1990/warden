@@ -34,8 +34,10 @@ Claude Code provides these specialized agents via the Task tool:
 
 **Phase 1: Discovery**
 - **Agent**: Main agent
-- **Task**: Single batch API call with `gh pr list --json`
+- **Task**: Single batch API call with `gh pr list --json` to get **PULL REQUESTS** (not branches!)
+- **Critical**: Use `gh pr list --state open --json number,headRefName,title,statusCheckRollup`
 - **Why**: Simple operation, no subagent needed
+- **Common mistake**: Using `git branch --list` - this lists branches, not PRs!
 
 **Phase 2: Analysis (Massively Parallel with Context)**
 - **Agent**: Multiple `general-purpose` agents (3-5 per PR, all in parallel, depth-dependent)
@@ -201,16 +203,29 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 
 ### Git Workflow
 
-**Workspace setup**:
+**Workspace setup** (with branch verification):
 ```bash
+# CRITICAL: Get PR's actual branch name from GitHub API
+PR_BRANCH=$(gh pr view ${PR_NUMBER} --json headRefName --jq '.headRefName')
+if [ -z "$PR_BRANCH" ]; then
+  echo "ERROR: Could not get branch for PR #${PR_NUMBER}"
+  exit 1
+fi
+
 WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
 
-# Shallow clone for speed
+# Clone and checkout PR (RECOMMENDED - handles verification)
 gh repo clone owner/repo . -- --depth=1
-git fetch --depth=1 origin pull/${PR_NUMBER}/head:pr-${PR_NUMBER}
-git checkout pr-${PR_NUMBER}
+gh pr checkout ${PR_NUMBER}
+
+# Verify we're on correct branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "$PR_BRANCH" ]; then
+  echo "ERROR: Branch mismatch! Current: $CURRENT_BRANCH, Expected: $PR_BRANCH"
+  exit 1
+fi
 ```
 
 **Commit format**:
@@ -299,20 +314,34 @@ See README.md for complete language-specific command reference.
 
 ## Best Practices
 
-1. **Always use parallel Task calls** when launching multiple Phase 2 subagents
-2. **Never modify user's working directory** - always use temporary workspace
-3. **Respect test strategy** - skip tests if `--test-strategy none` or file types match `--skip-tests-for`
-4. **Use Plan agent for Phase 3** - better at structured aggregation
-5. **Shallow clone** for workspace setup (unless `--reuse-workspace`)
-6. **Test according to strategy** - affected/full/smart/none
-7. **Rollback per-tier** - don't throw away good fixes
-8. **Clean up in background** (unless `--keep-workspace`)
-9. **Respect fix limits** - honor `--max-fixes-per-tier`
-10. **Flag based on strategy** - conservative flags more, aggressive flags less
-11. **Comment on PR** if `--comment-on-pr` is set
-12. **Respect parallelization limits** - `--max-parallel-prs` and `--max-parallel-agents`
-13. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
-14. **Send notifications** if webhook/Slack/Jira configured
+1. **Work with PRs, not branches** - Use `gh pr list`, `gh pr view`, `gh pr checkout`
+2. **Always verify branch** - Get branch name from `gh pr view --json headRefName` before checkout
+3. **Use `gh pr checkout <number>`** - Safest method (handles verification automatically)
+4. **Always use parallel Task calls** when launching multiple Phase 2 subagents
+5. **Never modify user's working directory** - always use temporary workspace
+6. **Respect test strategy** - skip tests if `--test-strategy none` or file types match `--skip-tests-for`
+7. **Use Plan agent for Phase 3** - better at structured aggregation
+8. **Shallow clone** for workspace setup (unless `--reuse-workspace`)
+9. **Test according to strategy** - affected/full/smart/none
+10. **Rollback per-tier** - don't throw away good fixes
+11. **Clean up in background** (unless `--keep-workspace`)
+12. **Respect fix limits** - honor `--max-fixes-per-tier`
+13. **Flag based on strategy** - conservative flags more, aggressive flags less
+14. **Comment on PR** if `--comment-on-pr` is set
+15. **Respect parallelization limits** - `--max-parallel-prs` and `--max-parallel-agents`
+16. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
+17. **Send notifications** if webhook/Slack/Jira configured
+
+## Common Mistakes to Avoid
+
+❌ Using `git branch --list` instead of `gh pr list`
+❌ Assuming branch names instead of fetching from PR data
+❌ Pushing to wrong branch without verification
+❌ Trusting cached/session data
+
+✅ Always fetch fresh PR data from GitHub API
+✅ Verify branch matches PR before pushing
+✅ Use `gh pr checkout <number>` for safety
 
 ## Example Execution Flow
 

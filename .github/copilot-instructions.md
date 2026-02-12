@@ -26,7 +26,11 @@ See README.md for complete parameter reference.
 
 ## Workflow
 
+**CRITICAL**: This skill works with **Pull Requests (PRs)**, NOT branches!
+
 1. **Discovery** - Batch `gh pr list --json` (single API call)
+   - ✅ Use: `gh pr list --author @me --state open --json ...`
+   - ❌ DON'T: `git branch --list` (this lists branches, not PRs!)
 2. **Analysis** - Parallel analysis of all PRs (CI, reviews, code quality)
 3. **Planning** - Deduplicate, prioritize by severity
 4. **User Interaction** - Select fixes
@@ -64,11 +68,23 @@ gh pr list --author @me --state open --json number,title,statusCheckRollup,revie
 
 ### GitHub CLI Usage
 
-All GitHub operations use `gh` CLI:
-- `gh pr list` - Discovery
-- `gh pr checks` - CI status
-- `gh pr view --json reviews,comments` - Review comments
-- `gh pr diff` - Code changes
+All GitHub operations use `gh` CLI for **PULL REQUESTS**:
+- `gh pr list --state open --json ...` - List open PRs (NOT branches!)
+- `gh pr checks <pr-number>` - Get CI status for a PR
+- `gh pr view <pr-number> --json reviews,comments` - Get review comments
+- `gh pr diff <pr-number>` - Get code changes in a PR
+
+**Critical Commands**:
+```bash
+# ✅ CORRECT - List pull requests
+gh pr list --author @me --state open --json number,title,statusCheckRollup,reviewDecision
+
+# ❌ WRONG - This lists branches, not PRs!
+git branch --list
+
+# ❌ WRONG - This shows repo info, not PRs!
+gh repo view
+```
 
 ## Key Optimizations
 
@@ -111,14 +127,29 @@ gh pr diff <pr-number>
 
 ## Phase 5: Execution (Incremental)
 
-**Workspace setup** (optimized):
+**Workspace setup** (optimized with branch verification):
 ```bash
+# MANDATORY: Get actual branch name from PR
+PR_BRANCH=$(gh pr view ${PR_NUMBER} --json headRefName --jq '.headRefName')
+if [ -z "$PR_BRANCH" ]; then
+  echo "ERROR: Could not get branch for PR #${PR_NUMBER}"
+  exit 1
+fi
+
 WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
+
+# Clone and checkout PR's actual branch
 gh repo clone owner/repo . -- --depth=1
-git fetch --depth=1 origin pull/${PR_NUMBER}/head:pr-${PR_NUMBER}
-git checkout pr-${PR_NUMBER}
+gh pr checkout ${PR_NUMBER}  # RECOMMENDED: Handles branch verification
+
+# Verify branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "$PR_BRANCH" ]; then
+  echo "ERROR: Branch mismatch! Current: $CURRENT_BRANCH, Expected: $PR_BRANCH"
+  exit 1
+fi
 ```
 
 **Fix strategy**:
@@ -212,6 +243,9 @@ For 3 PRs (~500 lines each):
 
 ## Best Practices
 
+- **Always work with PRs, not branches directly** - Use `gh pr list`, `gh pr view`, `gh pr checkout`
+- **Verify branch before pushing** - Use `gh pr view --json headRefName` to get correct branch
+- Use `gh pr checkout <pr-number>` (handles branch verification automatically)
 - Use `@github` for all GitHub operations
 - Batch API calls wherever possible
 - Shallow clone for workspace setup
@@ -220,6 +254,17 @@ For 3 PRs (~500 lines each):
 - Rollback per-tier, not full PR
 - Clean up in background
 - Flag complex changes for manual review
+
+## Common Mistakes to Avoid
+
+❌ **Using `git branch --list`** instead of `gh pr list`
+❌ **Assuming branch names** instead of fetching from PR data
+❌ **Pushing to wrong branch** - always verify with `gh pr view --json headRefName`
+❌ **Trusting cached data** - always fetch fresh PR info from GitHub API
+
+✅ **Use `gh pr checkout <number>`** - safest method
+✅ **Verify branch matches PR** before pushing
+✅ **Fetch fresh PR data** for each operation
 
 ## Full Documentation
 

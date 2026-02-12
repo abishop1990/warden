@@ -169,18 +169,71 @@ Review and fix PRs using the pr-review-and-fix workflow
 
 ### Phase 1: Discovery (Optimized)
 
+**IMPORTANT**: This skill reviews **Pull Requests (PRs)**, NOT branches.
+
 Use batch GitHub API queries for efficiency:
 
 ```bash
-# Single batch query with JSON output
+# Single batch query with JSON output for PULL REQUESTS
 gh pr list --author @me --state open --json number,title,statusCheckRollup,reviewDecision --limit 10
+
+# NOT: git branch --list (this lists branches, not PRs!)
+# NOT: gh repo view --json (this is repo info, not PRs!)
 ```
 
-1. Fetch all PR data in one batch API call (number, title, CI status, review status)
+1. Fetch all **PR data** in one batch API call (number, title, CI status, review status)
 2. Parse JSON and display formatted summary table
 3. Ask user which PRs to analyze (or "all")
 
+**Common Mistake**: Using `git branch` instead of `gh pr list`. Always use `gh pr list` to get pull requests.
+
 **Optimization**: Single API call instead of N sequential calls for N PRs.
+
+**Branch Verification Protocol** (MANDATORY):
+
+Before pushing ANY fixes, follow this protocol to ensure you're on the correct PR branch:
+
+1. **Fetch open PRs with branch names**:
+   ```bash
+   gh pr list --state open --json number,headRefName,title --author @me > /tmp/pr_map.json
+   ```
+
+2. **Build PR→Branch mapping**:
+   ```bash
+   # For each PR, extract number and branch name (headRefName)
+   jq -r '.[] | "\(.number):\(.headRefName)"' /tmp/pr_map.json
+   ```
+
+3. **Verify branch exists before checkout**:
+   ```bash
+   BRANCH=$(jq -r '.[] | select(.number==1234) | .headRefName' /tmp/pr_map.json)
+   if [ -z "$BRANCH" ]; then
+     echo "ERROR: PR #1234 not found in open PRs"
+     exit 1
+   fi
+   git ls-remote origin "$BRANCH" || { echo "ERROR: Branch $BRANCH does not exist"; exit 1; }
+   ```
+
+4. **Checkout PR's actual branch**:
+   ```bash
+   git fetch origin "$BRANCH"
+   git checkout "$BRANCH"
+   # OR using gh CLI:
+   gh pr checkout 1234  # This automatically checks out the correct branch
+   ```
+
+5. **Validate before push**:
+   ```bash
+   CURRENT_BRANCH=$(git branch --show-current)
+   if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+     echo "ERROR: Current branch $CURRENT_BRANCH != expected $BRANCH"
+     exit 1
+   fi
+   ```
+
+**Never trust cached/session data** - always fetch fresh PR data from GitHub API.
+
+**Recommended approach**: Use `gh pr checkout <pr-number>` which automatically handles branch verification.
 
 ### Phase 2: Analysis (Massively Parallel with Context)
 
@@ -337,20 +390,37 @@ What would you like to fix?
 
 For each PR with selected fixes:
 
-**5.1 Setup Workspace** (Optimized)
+**5.1 Setup Workspace** (Optimized with Branch Verification)
 ```bash
+# Get PR branch name from GitHub API (MANDATORY)
+PR_BRANCH=$(gh pr view ${PR_NUMBER} --json headRefName --jq '.headRefName')
+if [ -z "$PR_BRANCH" ]; then
+  echo "ERROR: Could not get branch for PR #${PR_NUMBER}"
+  exit 1
+fi
+
 # Use shallow clone for speed
 WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
 
-# Shallow clone (faster) - only fetch PR branch with depth=1
-gh repo clone owner/repo . -- --depth=1 --single-branch --branch pr-branch
-
-# OR if PR number:
+# Method 1: Clone and checkout PR (RECOMMENDED)
 gh repo clone owner/repo . -- --depth=1
-git fetch --depth=1 origin pull/${PR_NUMBER}/head:pr-${PR_NUMBER}
-git checkout pr-${PR_NUMBER}
+gh pr checkout ${PR_NUMBER}  # Handles branch verification automatically
+
+# Method 2: Manual branch checkout (if gh pr checkout unavailable)
+gh repo clone owner/repo . -- --depth=1
+git fetch --depth=1 origin "${PR_BRANCH}"
+git checkout "${PR_BRANCH}"
+
+# Verify we're on the correct branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "$PR_BRANCH" ]; then
+  echo "ERROR: Branch mismatch! Current: $CURRENT_BRANCH, Expected: $PR_BRANCH"
+  exit 1
+fi
+
+echo "✓ Verified on correct branch: $PR_BRANCH for PR #${PR_NUMBER}"
 ```
 
 **5.2 Incremental Fix Strategy** (Critical → High → Medium → Low)
