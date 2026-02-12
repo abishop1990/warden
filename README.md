@@ -86,17 +86,12 @@ warden \
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Real-world usage examples for every scenario
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
-### Integration
+### Platform Configuration
 
 - **[CLAUDE.md](CLAUDE.md)** - Claude Code specific configuration
 - **[AGENTS.md](AGENTS.md)** - Unified instructions for all AI platforms
 - **[.cursorrules](.cursorrules)** - Cursor configuration
 - **[copilot-instructions.md](.github/copilot-instructions.md)** - GitHub Copilot configuration
-
-### Examples
-
-- **[github-actions-example.yml](examples/github-actions-example.yml)** - GitHub Actions integration example
-- **[pre-commit.sh](examples/pre-commit.sh)** - Git pre-commit hook example
 
 ## Key Parameters
 
