@@ -95,7 +95,7 @@ warden \
 
 ### Examples
 
-- **[warden.yml](.github/workflows/warden.yml)** - GitHub Actions workflow example
+- **[github-actions-example.yml](examples/github-actions-example.yml)** - GitHub Actions integration example
 - **[pre-commit.sh](examples/pre-commit.sh)** - Git pre-commit hook example
 
 ## Key Parameters
