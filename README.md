@@ -54,11 +54,12 @@ This is an AI skill - your AI assistant reads the instruction files in this repo
 "Use Warden to review and fix my pull requests"
 ```
 
-**GitHub Copilot** (with this repo in workspace):
+**GitHub Copilot** (in VSCode/IDE with this repo in workspace):
 ```
-@github "Run the Warden skill from the instructions"
-@github "Execute the Warden protocol on my PRs"
+"Run the Warden skill"
+"Execute Warden on my PRs"
 ```
+Copilot reads `.github/copilot-instructions.md` automatically when in this repo.
 
 **Cursor** (with this repo in workspace):
 ```

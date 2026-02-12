@@ -22,21 +22,25 @@ Warden analyzes and fixes issues from:
 
 ## How to Invoke
 
-User must explicitly reference "Warden" for GitHub Copilot to use this skill:
+User must explicitly reference "Warden" for GitHub Copilot to use this skill.
 
-**Correct**:
+**In Copilot Chat (VSCode/IDE)**:
 ```
-@github "Run the Warden skill"
-@github "Execute Warden on my open PRs"
-@github "Use Warden to analyze PR #123"
+"Run the Warden skill"
+"Execute Warden on my open PRs"
+"Use Warden to analyze PR #123"
 ```
 
 **Too ambiguous** (Copilot won't know to use Warden):
 ```
-@github "Review my PRs"  ← Generic, won't use this skill
+"Review my PRs"  ← Generic, won't use this skill
 ```
 
-**Required**: Have Warden repository in workspace so Copilot reads this copilot-instructions.md file.
+**How it works**:
+- Have Warden repository in your workspace
+- Copilot automatically reads this `.github/copilot-instructions.md` file
+- Say "Run Warden" in Copilot Chat
+- Copilot follows the workflow documented here
 
 ### Key Parameters (40+ available - see README.md)
 - `--author <username>` - Review PRs by specific author
@@ -67,15 +71,11 @@ See README.md for complete parameter reference.
 
 ### Native Integration
 
-**Use @github mention**:
-```
-@github show me CI failures, review comments, and code issues for PRs #123, #125, #127
-```
-
-**Leverage GitHub Actions**:
+**Leverage GitHub features**:
 - Access CI logs directly through GitHub integration
 - View check run details without API calls
 - Monitor workflow status in real-time
+- Use `gh` CLI for all PR operations
 
 ### Batch Operations
 
@@ -84,13 +84,10 @@ See README.md for complete parameter reference.
 gh pr list --author @me --state open --json number,title,statusCheckRollup,reviewDecision --limit 10
 ```
 
-**Parallel PR analysis**:
-```
-@github analyze PRs #123, #125, #127 for:
-- CI failures and error patterns
-- Unresolved review comments
-- Code quality issues (security, performance, bugs)
-```
+**For analysis**, gather data from:
+- CI failures and error patterns (`gh pr checks`)
+- Review comments (`gh pr view --json reviews,comments`)
+- Code quality issues from diff analysis
 
 ### GitHub CLI Usage
 
@@ -121,7 +118,7 @@ gh repo view
 
 ## Implementation Guidelines
 
-1. **Use @github for native integration**
+1. **Use gh CLI** - For all GitHub PR operations
 2. **Batch API calls** - Single call for all PRs
 3. **Shallow clone** - `gh repo clone --depth=1`
 4. **Test targeted** - Only changed packages
@@ -272,7 +269,7 @@ For 3 PRs (~500 lines each):
 - **Always work with PRs, not branches directly** - Use `gh pr list`, `gh pr view`, `gh pr checkout`
 - **Verify branch before pushing** - Use `gh pr view --json headRefName` to get correct branch
 - Use `gh pr checkout <pr-number>` (handles branch verification automatically)
-- Use `@github` for all GitHub operations
+- Use `gh` CLI for all GitHub operations
 - Batch API calls wherever possible
 - Shallow clone for workspace setup
 - Test only affected packages

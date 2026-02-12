@@ -118,17 +118,21 @@ Review and fix PRs using the pr-review-and-fix workflow [OPTIONS]
 
 ### GitHub Copilot
 ```
-@copilot /pr-review-and-fix
+"Run the Warden skill"
+"Execute Warden on my PRs"
 ```
-- Use `@github` mention for native PR integration
-- Leverage GitHub Actions for CI insights
+- Use `gh` CLI for all GitHub operations
+- Leverage GitHub integration for CI insights
+- Copilot reads `.github/copilot-instructions.md` automatically
 
 ### Cursor
 ```
-Review and fix PRs using the pr-review-and-fix workflow
+"Run the Warden skill"
+"Execute Warden on my pull requests"
 ```
 - Use Composer mode for multi-file edits
 - Leverage codebase-wide context
+- Cursor reads `.cursorrules` automatically
 
 ## Implementation Guidelines
 
