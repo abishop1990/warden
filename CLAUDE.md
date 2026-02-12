@@ -17,23 +17,13 @@ User must explicitly reference "Warden" for Claude to use this skill:
 
 Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (50+ parameters), and platform-specific optimizations.
 
-## Execution Mode
-
-**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
-
-- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
-- ❌ NOT: Abstract "review against principles" analysis without running tools
+**Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md for details).
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for command discovery from repo docs.
 
-## Three Issue Sources
-
-Warden analyzes and fixes issues from:
-1. **CI failures** - Test failures, build errors, lint issues
-2. **Review comments** - Requested changes, unresolved feedback from reviewers
-3. **Code quality** - Security, performance, architecture issues from analysis
-
 ## Skill Overview
+
+Warden analyzes three issue sources (CI failures, review comments, code quality) - see AGENTS.md for details.
 
 This skill implements a 6-phase workflow for PR review and automated fixes:
 
@@ -52,21 +42,58 @@ See [README.md](README.md) for complete workflow documentation.
 
 Claude Code provides these specialized agents via the Task tool:
 
-- **`Bash`** - Command execution specialist for running bash commands
-- **`general-purpose`** - General-purpose agent for complex, multi-step tasks
 - **`Explore`** - Fast agent specialized for exploring codebases
 - **`Plan`** - Software architect agent for designing implementation plans
+- **Task** (default) - General-purpose agent for complex, multi-step tasks
+
+**Note**: Subagents can use the Bash tool for command execution depending on their configuration.
 
 ### Subagent Usage by Phase
 
 **Phase 1: Discovery**
 - **Agent**: Main agent
 - **Task**: Single batch API call with `gh pr list --json` to get **PULL REQUESTS** (not branches!)
-- **Critical**: Use `gh pr list --state open --json number,headRefName,title,statusCheckRollup`
+- **Command**: `gh pr list --state open --json number,headRefName,title,statusCheckRollup,reviews,updatedAt`
 - **Why**: Simple operation, no subagent needed
 - **Common mistake**: Using `git branch --list` - this lists branches, not PRs!
 
-**Phase 2: Analysis (Massively Parallel with Context)**
+**Scope Selection:**
+- If ≤10 PRs: Analyze all
+- If >10 PRs: Auto-select top 10 by priority and INFORM user
+- **Priority**: Failing CI > Review comments > Most recently updated
+- **User can override**: "analyze all PRs", "only PR #123", "analyze PR #123, #125"
+
+**Default Configuration**: Standard review depth, Affected test strategy, Balanced fix strategy (see AGENTS.md for details and overrides).
+
+## Model Selection (Claude Code)
+
+**⚠️ Note**: Model selection via Task tool's `model` parameter is currently non-functional in Claude Code 2.1.12+. Use the `/model` command before creating tasks instead.
+
+**Recommended models by phase**:
+- **Phase 2 Analysis** (CI/Review/Simple code review): Haiku (fast, cost-effective)
+- **Phase 2 Analysis** (Complex code quality review): Sonnet (better for nuanced analysis)
+- **Phase 3 Planning**: Sonnet (requires structured thinking)
+- **Phase 5 Execution**: Sonnet (requires code generation quality)
+
+**To set model**: Use `/model sonnet` or `/model haiku` before invoking Task tool.
+
+## Platform Tool Access
+
+**Claude Code Task agents HAVE full tool access:**
+- ✅ Bash tool - Can run `gh` CLI commands directly
+- ✅ Read, Grep, Glob - Local file operations
+- ✅ WebFetch - Can access URLs if needed
+
+**This means Claude Code subagents CAN directly call:**
+```bash
+gh pr view 123 --json reviews,comments
+gh pr checks 123 --json name,status,conclusion
+gh pr diff 123
+```
+
+**Note**: Other platforms (GitHub Copilot, Cursor) may have subagent tool limitations. See their platform-specific files for workarounds.
+
+**Phase 2: Analysis (Parallel with Batching)**
 - **Agent**: Multiple `general-purpose` agents (3-5 per PR, all in parallel, depth-dependent)
 - **Context Gathering** (before launching subagents):
   1. **PR Metadata**: `gh pr view --json title,body,author` - understand PR intent
@@ -80,10 +107,12 @@ Claude Code provides these specialized agents via the Task tool:
   5. (Thorough) Performance Review: Deep performance focus
   6. (Comprehensive) Architecture Review: Deep design focus
 - **Why**: Complex multi-step analysis requiring autonomy and context
-- **Parallelization**:
-  - Standard: 9 agents for 3 PRs (3 per PR)
-  - Thorough: 12 agents for 3 PRs (4 per PR)
-  - Comprehensive: 15 agents for 3 PRs (5 per PR)
+- **Batching Strategy**: Max 5 PRs per batch to prevent overload (see AGENTS.md for details).
+
+**Parallelization per batch**:
+  - Standard: 15 agents for 5 PRs (3 per PR)
+  - Thorough: 20 agents for 5 PRs (4 per PR)
+  - Comprehensive: 25 agents for 5 PRs (5 per PR)
 
 **Example parallel Task calls** (Standard depth):
 ```
@@ -121,44 +150,7 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 - **Agent**: Main agent
 - **Task**: Present report, get approval, WAIT for response
 - **Why**: User interaction happens in main agent
-
-**CRITICAL**: Before executing ANY fixes, you MUST:
-
-1. **Consolidate all findings** from Phase 2 analysis (all PRs, all three issue sources)
-   - Aggregate CI failures, review comments, and code quality issues
-   - Remove duplicates across different sources
-   - Enrich with severity (Critical/High/Medium/Low) and complexity
-
-2. **Present comprehensive report** with severity breakdown:
-   ```
-   === Warden Analysis Report ===
-
-   Found N issues across M PRs:
-
-   PR #123: Feature XYZ
-   ├─ Critical (2): [Issue IDs with file:line]
-   ├─ High (3): [Issue IDs with file:line]
-   └─ Medium (1): [Issue IDs with file:line]
-
-   PR #125: Bug Fix ABC
-   └─ High (1): [Issue IDs with file:line]
-
-   Total: X Critical, Y High, Z Medium, W Low
-   ```
-
-3. **Ask user for approval** with clear options:
-   - "Fix all issues?" (default)
-   - "Fix only Critical and High?"
-   - "Fix specific PRs only?"
-   - "Preview detailed findings first?"
-   - "Abort (no changes)"
-
-4. **WAIT for user response** - Do NOT proceed to Phase 5 without explicit approval
-   - User may want to review detailed findings
-   - User may want to exclude certain PRs or issue types
-   - User may want to adjust severity thresholds
-
-**Common mistake**: Jumping directly from Phase 3 (Planning) to Phase 5 (Execution) without user approval. This violates the safety-first design and may make unwanted changes.
+- **Details**: See AGENTS.md Phase 4 for complete requirements (report format, approval options, wait protocol)
 
 **Phase 5: Execution**
 - **Complexity-based routing**:

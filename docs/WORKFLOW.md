@@ -4,10 +4,33 @@
 
 ## Phase 1: Discovery
 
-Batch fetch existing open PRs:
+**Batch fetch existing open PRs:**
 ```bash
-gh pr list --author @me --state open --json number,title,statusCheckRollup --limit 10
+gh pr list --author @me --state open --json number,title,statusCheckRollup,reviews,updatedAt
 ```
+
+**Scope Selection:**
+- If ≤10 PRs: Analyze all
+- If >10 PRs: Select top 10 by priority and INFORM user:
+  ```
+  Found 14 open PRs. Analyzing top 10 by priority:
+  - 3 with failing CI
+  - 4 with review comments
+  - 3 most recent
+
+  Say "analyze all 14" to override, or "analyze PR #123, #125" for specific PRs.
+  ```
+
+**Priority Order:**
+1. Failing CI (statusCheckRollup = FAILURE)
+2. Has unresolved review comments
+3. Most recently updated
+
+**User can override with natural language:**
+- "Analyze all my PRs" → Removes limit
+- "Only analyze PR #123" → Specific PR
+- "Analyze PRs #123, #125, #127" → Multiple specific PRs
+- "Analyze last 5 PRs" → Custom limit
 
 ## Phase 2: Analysis (Parallel)
 

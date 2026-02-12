@@ -61,7 +61,7 @@ AI assistants need explicit reference to "Warden" to use this skill:
 
 6-phase workflow for PR review and automated fixes:
 
-1. **Discovery** - Batch API call to list PRs (single call, not N calls)
+1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
 2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing **three issue sources**:
    - **CI failures** (test failures, build errors, lint issues)
    - **Review comments** (requested changes, unresolved feedback)
@@ -72,6 +72,19 @@ AI assistants need explicit reference to "Warden" to use this skill:
 4. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
 5. **Execution** - Fix all issue types (CI + Review + Code), validate, push
 6. **Summary Report** - Metrics and next steps
+
+## Default Configuration
+
+When user doesn't specify parameters, use these defaults:
+
+- **Review Depth**: Standard (1 generalist reviewer per PR)
+- **Test Strategy**: Affected (test only changed packages)
+- **Fix Strategy**: Balanced (high + medium confidence fixes)
+
+**Examples of user specifying non-defaults:**
+- "Use comprehensive review" → 3+ reviewers per PR
+- "Run full test suite" → All tests, not just affected
+- "Be conservative with fixes" → High confidence only
 
 ## Phase 4: User Interaction (MANDATORY)
 
@@ -115,9 +128,12 @@ AI assistants need explicit reference to "Warden" to use this skill:
 
 ## Key Optimizations
 
-**Parallel Execution**:
-- Analyzing 3 PRs? Launch all 9 analysis subagents simultaneously (3 per PR)
-- 2.5x faster than sequential
+**Parallel Execution with Batching**:
+- **Max 5 PRs analyzed in parallel** (15 subagents for Standard depth)
+- If more PRs selected: Process in batches of 5
+- Example: 14 PRs = 3 batches (5 + 5 + 4)
+- **Why**: Prevents system overload, API rate limiting, agent runtime limits
+- Within each batch: All subagents run simultaneously (2.5x faster than sequential)
 
 **Incremental Validation**:
 - Fix Critical tier → Test → Commit → Push
@@ -134,6 +150,29 @@ AI assistants need explicit reference to "Warden" to use this skill:
 - Standard (1 reviewer): 172s vs 291s = **1.7x faster**
 - Thorough (2 reviewers): 187s vs 291s = **1.6x faster**
 - Comprehensive (3 reviewers): 202s vs 291s = **1.4x faster**
+
+## Platform Tool Limitations
+
+**CRITICAL**: Different platforms have different subagent/task tool access:
+
+### Claude Code ✅
+- **Subagents HAVE**: Bash tool (can run `gh` CLI directly)
+- **Phase 2**: Subagents can call `gh pr view`, `gh pr checks`, etc.
+- **No workaround needed**
+
+### GitHub Copilot ⚠️
+- **Subagents DON'T HAVE**: `gh` CLI or external commands
+- **Subagents ONLY HAVE**: Local file tools (grep, glob, read)
+- **Phase 2 Workaround**: Main agent pre-fetches all PR data, saves to local files, passes file paths to subagents
+- **See**: `.github/copilot-instructions.md` for detailed workaround
+
+### Cursor ⚠️
+- **Status**: Unknown - likely similar to Copilot (local files only)
+- **Recommendation**: Test and document; may need same workaround as Copilot
+
+### Codex ❓
+- **Status**: Unknown - needs testing
+- **Recommendation**: Document findings after testing
 
 ## Platform-Specific Invocation
 

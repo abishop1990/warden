@@ -6,19 +6,9 @@ Warden v1.2: Cross-platform AI skill for automated PR review and fixes.
 
 **New in v1.2**: Contextual review, 50+ configuration parameters, 5 specialized reviewers, flexible test strategies, PR integration, external webhooks.
 
-## Execution Mode
+**Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md).
 
-**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
-
-- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
-- ❌ NOT: Abstract "review against principles" analysis without running tools
-
-## Three Issue Sources
-
-Warden analyzes and fixes issues from:
-1. **CI failures** - Test failures, build errors, lint issues
-2. **Review comments** - Requested changes, unresolved feedback from reviewers
-3. **Code quality** - Security, performance, architecture issues from analysis
+Analyzes three issue sources (CI failures, review comments, code quality).
 
 ## How to Invoke
 
@@ -59,8 +49,9 @@ See README.md for complete parameter reference.
 **CRITICAL**: This skill works with **Pull Requests (PRs)**, NOT branches!
 
 1. **Discovery** - Batch `gh pr list --json` (single API call)
-   - ✅ Use: `gh pr list --author @me --state open --json ...`
+   - ✅ Use: `gh pr list --author @me --state open --json number,title,statusCheckRollup,reviews,updatedAt`
    - ❌ DON'T: `git branch --list` (this lists branches, not PRs!)
+   - **Scope**: If >10 PRs, auto-select top 10 by priority (Failing CI > Review comments > Recent) and inform user
 2. **Analysis** - Parallel analysis of all PRs (CI, reviews, code quality)
 3. **Planning** - Deduplicate, prioritize by severity
 4. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
@@ -71,53 +62,57 @@ See [docs/WORKFLOW.md](../docs/WORKFLOW.md) for complete workflow details.
 
 ## Phase 4: User Interaction (MANDATORY)
 
-**CRITICAL**: Before executing ANY fixes, you MUST:
+**CRITICAL**: Before executing ANY fixes, you MUST consolidate findings, present comprehensive report, ask for approval, and WAIT for user response.
 
-1. **Consolidate all findings** from Phase 2 analysis (all PRs, all three issue sources)
-   - Aggregate CI failures, review comments, and code quality issues
-   - Remove duplicates across different sources
-   - Enrich with severity (Critical/High/Medium/Low) and complexity
+**See**: AGENTS.md Phase 4 for complete requirements including report format, approval options, and wait protocol.
 
-2. **Present comprehensive report** with severity breakdown:
-   ```
-   === Warden Analysis Report ===
-
-   Found N issues across M PRs:
-
-   PR #123: Feature XYZ
-   ├─ Critical (2): [Issue IDs with file:line]
-   ├─ High (3): [Issue IDs with file:line]
-   └─ Medium (1): [Issue IDs with file:line]
-
-   PR #125: Bug Fix ABC
-   └─ High (1): [Issue IDs with file:line]
-
-   Total: X Critical, Y High, Z Medium, W Low
-   ```
-
-3. **Ask user for approval** with clear options:
-   - "Fix all issues?" (default)
-   - "Fix only Critical and High?"
-   - "Fix specific PRs only?"
-   - "Preview detailed findings first?"
-   - "Abort (no changes)"
-
-4. **WAIT for user response** - Do NOT proceed to Phase 5 without explicit approval
-   - User may want to review detailed findings
-   - User may want to exclude certain PRs or issue types
-   - User may want to adjust severity thresholds
-
-**Common mistake**: Jumping directly from Phase 3 (Planning) to Phase 5 (Execution) without user approval. This violates the safety-first design and may make unwanted changes.
+**Defaults**: Standard review, Affected tests, Balanced fixes. **Batching**: Max 5 PRs per batch. See AGENTS.md for details.
 
 ## GitHub Copilot Specific Optimizations
 
+### ⚠️ Critical: Agent Tool Limitations
+
+**GitHub Copilot specialized agents do NOT have access to:**
+- `gh` CLI
+- GitHub API
+- External commands (only local filesystem tools: grep, glob, read)
+
+**This breaks the standard Warden Phase 2 design that assumes subagents can call `gh pr view`, `gh pr checks`, etc.**
+
+**REQUIRED WORKAROUND for Copilot:**
+
+1. **Main agent pre-fetches ALL PR data** using `gh` CLI (Phase 1)
+2. **Save PR data to local temp files** for subagents to analyze
+3. **Launch subagents with file paths** instead of PR numbers
+4. **Subagents read local JSON/diff files** instead of calling GitHub API
+
+**Example Phase 1 data collection:**
+```bash
+# For each selected PR, main agent fetches and saves locally
+for PR_NUM in 3935 3940 3942; do
+  gh pr view $PR_NUM --json number,title,body,statusCheckRollup,reviews,comments > /tmp/warden-pr-${PR_NUM}.json
+  gh pr diff $PR_NUM > /tmp/warden-pr-${PR_NUM}.diff
+  gh pr checks $PR_NUM --json name,status,conclusion > /tmp/warden-pr-${PR_NUM}-checks.json
+done
+```
+
+**Example Phase 2 subagent invocation:**
+```
+# ❌ WRONG (doesn't work in Copilot):
+"Analyze CI failures for PR #3935 using gh pr checks"
+
+# ✅ CORRECT (works in Copilot):
+"Analyze /tmp/warden-pr-3935-checks.json and identify CI failures.
+ PR details in /tmp/warden-pr-3935.json, diff in /tmp/warden-pr-3935.diff"
+```
+
 ### Native Integration
 
-**Leverage GitHub features**:
+**Leverage GitHub features** (main agent only):
+- Use `gh` CLI for all PR operations (main agent fetches data)
 - Access CI logs directly through GitHub integration
 - View check run details without API calls
 - Monitor workflow status in real-time
-- Use `gh` CLI for all PR operations
 
 ### Batch Operations
 
@@ -168,26 +163,59 @@ gh repo view
 6. **Background cleanup** - Non-blocking workspace removal
 7. **Never modify user's working directory** - Use `/tmp` workspace
 
-## Phase 2: Analysis (Parallel)
+## Phase 2: Analysis (Parallel with Local Files)
 
-For each PR, analyze:
+**⚠️ CRITICAL FOR COPILOT**: Main agent must pre-fetch all data before launching subagents!
 
-**CI Analysis**:
+**Step 1: Main agent fetches and saves data locally** (for each selected PR):
 ```bash
-gh pr checks <pr-number> --json name,status,conclusion,detailsUrl
-# If failed, fetch logs and categorize failures
+# Create temp directory for this Warden session
+WARDEN_TMP="/tmp/warden-session-$(date +%s)"
+mkdir -p "$WARDEN_TMP"
+
+# For each PR, fetch all needed data
+for PR_NUM in ${SELECTED_PRS[@]}; do
+  # PR metadata and reviews
+  gh pr view $PR_NUM --json number,title,body,author,statusCheckRollup,reviews,comments,updatedAt \
+    > "$WARDEN_TMP/pr-${PR_NUM}.json"
+
+  # PR diff for code analysis
+  gh pr diff $PR_NUM > "$WARDEN_TMP/pr-${PR_NUM}.diff"
+
+  # CI check details
+  gh pr checks $PR_NUM --json name,status,conclusion,detailsUrl \
+    > "$WARDEN_TMP/pr-${PR_NUM}-checks.json"
+done
 ```
 
-**Review Comments**:
-```bash
-gh pr view <pr-number> --json reviews,comments
-# Identify unresolved threads and actionable feedback
+**Step 2: Launch subagents with local file references** (NOT PR numbers):
+```
+# For PR #3935, launch 3 parallel subagents:
+
+Subagent 1 - CI Analysis:
+"Analyze CI failures in /tmp/warden-session-xxx/pr-3935-checks.json.
+ Identify failed checks, categorize by type (test/build/lint).
+ PR context in /tmp/warden-session-xxx/pr-3935.json"
+
+Subagent 2 - Review Comments:
+"Analyze review comments in /tmp/warden-session-xxx/pr-3935.json (reviews and comments fields).
+ Identify unresolved threads and actionable feedback.
+ Categorize by severity."
+
+Subagent 3 - Code Quality:
+"Review code changes in /tmp/warden-session-xxx/pr-3935.diff.
+ PR description and intent in /tmp/warden-session-xxx/pr-3935.json.
+ Check for security, performance, bugs, best practices."
 ```
 
-**Code Quality**:
+**Step 3: Subagents read local files** (no `gh` access needed):
+- Subagents use grep/glob/read tools on local JSON and diff files
+- All GitHub data is already fetched and saved locally
+- Subagents return findings to main agent
+
+**Step 4: Cleanup after analysis**:
 ```bash
-gh pr diff <pr-number>
-# Analyze for bugs, security, performance, best practices
+rm -rf "$WARDEN_TMP"
 ```
 
 ## Phase 5: Execution (Incremental)

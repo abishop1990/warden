@@ -14,26 +14,16 @@ User must explicitly reference "Warden" for Cursor to use this skill:
 
 Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, 50+ configuration parameters, and 1.2-1.7x performance improvement.
 
-## Execution Mode
-
-**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
-
-- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
-- ❌ NOT: Abstract "review against principles" analysis without running tools
+**Execution Mode**: Executes actual commands and checks exit codes (see AGENTS.md).
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for command discovery details.
 
-## Three Issue Sources
-
-Warden analyzes and fixes issues from:
-1. **CI failures** - Test failures, build errors, lint issues
-2. **Review comments** - Requested changes, unresolved feedback
-3. **Code quality** - Security, performance, architecture issues
-
 ## Workflow Overview
 
+Analyzes three issue sources (CI failures, review comments, code quality):
+
 6-phase workflow:
-1. **Discovery** - Batch API call to list PRs
+1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
 2. **Analysis** - ALL subagents for ALL PRs analyzing all three issue sources
 3. **Planning** - Aggregate all sources, deduplicate, prioritize
 4. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
@@ -42,49 +32,32 @@ Warden analyzes and fixes issues from:
 
 See [README.md](README.md) for complete documentation.
 
+**Defaults**: Standard review, Affected tests, Balanced fixes. **Batching**: Max 5 PRs/batch. See AGENTS.md.
+
 ## Phase 4: User Interaction (MANDATORY)
 
-**CRITICAL**: Before executing ANY fixes, you MUST:
+**CRITICAL**: Must consolidate findings, present report, get approval, and WAIT before execution.
 
-1. **Consolidate all findings** from Phase 2 analysis (all PRs, all three issue sources)
-   - Aggregate CI failures, review comments, and code quality issues
-   - Remove duplicates across different sources
-   - Enrich with severity (Critical/High/Medium/Low) and complexity
+**See**: AGENTS.md Phase 4 for complete user interaction requirements.
 
-2. **Present comprehensive report** with severity breakdown:
-   ```
-   === Warden Analysis Report ===
+## ⚠️ Cursor Tool Limitations (Needs Verification)
 
-   Found N issues across M PRs:
+**Unknown**: Whether Cursor Composer subagents have access to `gh` CLI.
 
-   PR #123: Feature XYZ
-   ├─ Critical (2): [Issue IDs with file:line]
-   ├─ High (3): [Issue IDs with file:line]
-   └─ Medium (1): [Issue IDs with file:line]
+**If subagents DON'T have `gh` access** (similar to Copilot):
+- Use workaround: Main agent pre-fetches PR data, saves to local files
+- Pass file paths to subagents instead of PR numbers
+- See `.github/copilot-instructions.md` Phase 2 for detailed workaround pattern
 
-   PR #125: Bug Fix ABC
-   └─ High (1): [Issue IDs with file:line]
+**If subagents DO have `gh` access** (similar to Claude Code):
+- Subagents can directly call `gh pr view`, `gh pr checks`, etc.
+- No workaround needed
 
-   Total: X Critical, Y High, Z Medium, W Low
-   ```
-
-3. **Ask user for approval** with clear options:
-   - "Fix all issues?" (default)
-   - "Fix only Critical and High?"
-   - "Fix specific PRs only?"
-   - "Preview detailed findings first?"
-   - "Abort (no changes)"
-
-4. **WAIT for user response** - Do NOT proceed to Phase 5 without explicit approval
-   - User may want to review detailed findings
-   - User may want to exclude certain PRs or issue types
-   - User may want to adjust severity thresholds
-
-**Common mistake**: Jumping directly from Phase 3 (Planning) to Phase 5 (Execution) without user approval. This violates the safety-first design and may make unwanted changes.
+**Action needed**: Test and document Cursor's actual capabilities.
 
 ## Cursor-Specific Optimizations
 
-### Composer Mode Usage
+### Using Composer
 
 **Phase 2: Analysis**
 - Use Composer to analyze multiple PRs in one context window
