@@ -17,6 +17,10 @@ This file provides unified instructions for all AI coding assistants working wit
 - ❌ Abstract "review against principles" analysis
 - ❌ Manual inspection without running tools
 - ❌ Conceptual suggestions without hands-on fixes
+- ❌ Skip review comments on green-CI PRs
+- ❌ Ignore bot/AI review comments (Copilot, security bots, etc.)
+
+**CRITICAL**: Analyze **ALL three sources** (CI + Review + Code) for **EVERY PR** regardless of CI status.
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for exact commands to execute per language.
 
@@ -62,7 +66,7 @@ AI assistants need explicit reference to "Warden" to use this skill:
 7-phase workflow for PR review and automated fixes:
 
 1. **Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
-2. **Analysis** - Launch ALL subagents for ALL PRs in parallel analyzing three issue sources (CI/Review/Code)
+2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL three sources (CI + Review + Code) regardless of CI status
 3. **Validation** - Discover repo validation commands (CLAUDE.md/CI), verify PR branch integrity, run build to check compilation
 4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
 5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**

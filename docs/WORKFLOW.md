@@ -34,11 +34,21 @@ gh pr list --author @me --state open --json number,title,statusCheckRollup,revie
 
 ## Phase 2: Analysis (Parallel)
 
-For each PR, launch parallel subagents to analyze **three issue sources**:
+**CRITICAL**: Analyze **ALL three issue sources** for **EVERY PR**, regardless of CI status.
 
-**Subagent A**: Analyze CI failures (test failures, build errors, lint issues)
-**Subagent B**: Analyze review comments (requested changes, unresolved feedback)
-**Subagent C-E**: Code quality review (security, performance, architecture)
+For each PR, launch parallel subagents:
+
+**Subagent A - CI Failures**: Test failures, build errors, lint issues
+- Even if CI is green, check for warnings or flaky tests
+
+**Subagent B - Review Comments** (ALL comments, including bots):
+- Human reviews (requested changes, suggestions, questions)
+- **Bot/AI reviews** (GitHub Copilot, code analysis bots, security scanners)
+- Parse for actionable items: "should", "must", "concern", "todo", "recommend"
+- Don't skip green-CI PRs - they may have unresolved review feedback
+
+**Subagent C-E - Code Quality**: Security, performance, architecture issues
+- Independent of CI and review status
 
 **Context gathered**:
 1. PR description → Understand intent

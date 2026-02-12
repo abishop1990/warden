@@ -213,10 +213,15 @@ Subagent 1 - CI Analysis:
  Identify failed checks, categorize by type (test/build/lint).
  PR context in /tmp/warden-session-xxx/pr-3935.json"
 
-Subagent 2 - Review Comments:
-"Analyze review comments in /tmp/warden-session-xxx/pr-3935.json (reviews and comments fields).
+Subagent 2 - Review Comments (ALL reviews, including bots):
+"Analyze ALL review comments in /tmp/warden-session-xxx/pr-3935.json (reviews and comments fields).
+
+ CRITICAL: Include bot/AI reviews (GitHub Copilot, security scanners, code analysis bots).
+ Parse for actionable keywords: 'should', 'must', 'concern', 'issue', 'todo', 'recommend'.
  Identify unresolved threads and actionable feedback.
- Categorize by severity."
+ Categorize by severity.
+
+ DON'T skip this even if CI is green - review feedback exists independently of CI status."
 
 Subagent 3 - Code Quality:
 "Review code changes in /tmp/warden-session-xxx/pr-3935.diff.
