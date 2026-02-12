@@ -5,6 +5,8 @@ All notable changes to Warden will be documented in this file.
 ## [1.2.0] - 2025-02-12
 
 ### Added
+- **Phase 4 User Approval**: Mandatory user approval step before executing fixes, prevents AI from jumping directly from planning to execution
+- **Installation System**: Complete skill installation infrastructure with one-line installer, skill manifest, and platform-specific guides
 - **Command Discovery**: Automatically discovers build/lint/test commands from repo's AI instruction files (CLAUDE.md, .github/workflows/, etc.) instead of hard-coded defaults
 - **Three Issue Sources**: Explicitly analyzes CI failures + review comments + code quality issues
 - **Complete Validation**: Build → Lint → Format → Test sequence before every push (prevents CI failures)
@@ -17,11 +19,20 @@ All notable changes to Warden will be documented in this file.
 - **Safety Features**: Branch protection, pre-push review, rollback branches, validation enforcement
 - **Platform Optimizations**: Specific guidance for Claude Code, GitHub Copilot, Cursor
 
+#### Installation Files
+- `skill.json` - Skill manifest with metadata and platform compatibility
+- `package.json` - npm-style package for future skill registries
+- `INSTALL.md` - Comprehensive installation guide for all platforms
+- `install.sh` - One-line installer: `curl -fsSL https://raw.githubusercontent.com/abishop1990/warden/main/install.sh | bash`
+- `uninstall.sh` - Clean removal script with confirmation
+
 ### Fixed
+- **Phase 4 Gap**: AI platforms now must consolidate findings, present report, and wait for user approval before execution
 - **Validation Order**: Enforces test BEFORE push (not after) to prevent broken code reaching CI
 - **Branch Verification**: Uses `gh pr checkout` to ensure correct PR branch
 - **Workspace Cleanup**: Verified synchronous cleanup prevents disk space issues
 - **Multi-push Cycles**: Local validation (build+lint+test) prevents multiple push/fix iterations
+- **README Clarity**: Removed AI-focused content, reorganized into user vs developer sections, replaced CLI flags with natural language examples
 
 ### Changed
 - **Documentation Structure**: Moved from monolithic README to modular docs/ directory
@@ -29,7 +40,8 @@ All notable changes to Warden will be documented in this file.
 - **Parameter Count**: Updated from "40+" to "50+" (actual count: 59 parameters)
 
 ### Documentation
-- `README.md` - Concise overview (193 lines)
+- `README.md` - User-focused overview with natural language examples
+- `INSTALL.md` - Platform-specific installation guide
 - `QUICKSTART.md` - 5-minute introduction (146 lines)
 - `docs/WORKFLOW.md` - 6-phase workflow (105 lines)
 - `docs/VALIDATION-ORDER.md` - Critical validation sequence (91 lines)
