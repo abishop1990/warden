@@ -7,8 +7,17 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 ## Overview
 
-Warden is an AI coding assistant skill that analyzes CI failures, review comments, and code quality, then helps fix identified issues. It works across multiple AI platforms:
+Warden is an AI coding assistant skill that reviews **existing Pull Requests**, identifies issues (CI failures, review comments, code quality problems), and automatically fixes them by pushing validated changes back to the PR.
 
+**How it works**:
+1. Developer creates PR (may have CI failures, review feedback, code issues)
+2. Warden analyzes the existing PR
+3. Warden identifies specific issues to fix
+4. Warden makes fixes and validates them locally (build + lint + test)
+5. Warden pushes fixes back to the same PR
+6. PR is updated with fixes, CI runs again
+
+Works across multiple AI platforms:
 - **Claude Code** - Anthropic's AI pair programmer
 - **GitHub Copilot** - GitHub's AI assistant
 - **Cursor** - AI-first code editor

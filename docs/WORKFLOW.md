@@ -4,14 +4,21 @@ How Warden analyzes and fixes PRs, phase by phase.
 
 ## TL;DR
 
-1. **Discovery**: Batch fetch all open PRs with `gh pr list`
-2. **Analysis**: Launch parallel subagents (CI + Reviews + Code Quality per PR)
+**Warden works on EXISTING PRs** (created by developers, may have issues)
+
+1. **Discovery**: Batch fetch existing open PRs with `gh pr list`
+2. **Analysis**: Launch parallel subagents (analyze CI failures, review comments, code quality per PR)
 3. **Planning**: Aggregate findings, deduplicate, sort by severity
 4. **Interaction**: Show structured report, ask what to fix
-5. **Execution**: Fix by tier → Test → Commit → Push (incremental validation)
+5. **Execution**: For each PR:
+   - Checkout existing PR branch in temp workspace
+   - Make fixes to address identified issues
+   - Validate Warden's fixes: Build → Lint → Format → Test
+   - Push fixes back to the same PR (updates it)
+   - Clean up temp workspace
 6. **Summary**: Report metrics and next steps
 
-**CRITICAL**: Always validate (run tests) BEFORE committing or pushing. See [VALIDATION-ORDER.md](VALIDATION-ORDER.md).
+**CRITICAL**: Always validate Warden's fixes (build + lint + test) BEFORE pushing them to the PR. See [VALIDATION-ORDER.md](VALIDATION-ORDER.md).
 
 ---
 
@@ -243,28 +250,38 @@ What would you like to fix?
 
 ## Phase 5: Execution (Incremental with Validation)
 
-**Key Principle**: Each PR gets its own isolated temporary workspace. All work happens there, then it's cleaned up.
+**Key Principle**: Warden works on EXISTING PRs that developers already created. It analyzes them, identifies issues, makes fixes, and pushes fixes back to the same PR.
 
 **CRITICAL**: See [VALIDATION-ORDER.md](VALIDATION-ORDER.md) for mandatory validation sequence.
 
 ### High-Level Loop Structure
 
 ```
-FOR EACH PR (that user selected to fix):
+FOR EACH EXISTING PR (that user selected to fix):
+
+  CONTEXT: PR already exists with developer's changes
+           PR may have CI failures, review comments, code quality issues
+           Warden will FIX these issues and push fixes to the PR
 
   1. Create isolated temp workspace: /tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/
      ↓
-  2. Clone repo into this workspace (shallow clone for speed)
+  2. Clone repo into this workspace (shallow clone)
      ↓
-  3. Checkout the PR's branch (verified from GitHub API)
+  3. Checkout the EXISTING PR's branch (verified from GitHub API)
+     → This branch contains the developer's original changes
      ↓
-  4. Do ALL work in this isolated workspace:
-     - Fix Critical tier → Build → Lint → Format → Test → Commit → Push
-     - Fix High tier → Build → Lint → Format → Test → Commit → Push
-     - Fix Medium tier → Build → Lint → Format → Test → Commit → Push
-     - Fix Low tier → Build → Lint → Format → Test → Commit → Push
+  4. Make FIXES to address identified issues:
+     For each severity tier (Critical → High → Medium → Low):
+       a. Apply fixes to the existing code
+       b. Validate WARDEN'S FIXES locally:
+          - Build (ensure Warden's fixes compile)
+          - Lint (ensure Warden's fixes pass quality checks)
+          - Format (auto-fix style in Warden's fixes)
+          - Test (ensure Warden's fixes don't break functionality)
+       c. If validation passes: Commit + Push fixes to PR
+       d. If validation fails: Rollback fixes, try next tier
      ↓
-  5. Verify CI started
+  5. Verify CI started (to validate the updated PR with Warden's fixes)
      ↓
   6. **Clean up THIS workspace completely**
      - rm -rf /tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/
@@ -279,12 +296,19 @@ After all PRs processed:
   - Report summary
 ```
 
-**Important**:
-- Each PR is completely isolated from others
-- Your original working directory is NEVER modified
-- All changes happen in temp workspaces
-- Workspaces are cleaned up immediately after each PR
-- No shared state between PRs
+**Important distinctions**:
+- **Developer creates PR** → Original changes (may have issues)
+- **Warden analyzes PR** → Identifies CI failures, review comments, code issues
+- **Warden makes fixes** → Addresses the identified issues
+- **Warden validates locally** → Ensures ITS fixes won't cause NEW CI failures
+- **Warden pushes fixes** → Updates the existing PR with fixes
+- **PR CI runs again** → Validates the updated PR code
+
+**Why local validation matters**:
+- Original PR may have CI failures (that's why we're fixing it!)
+- Warden's fixes must NOT introduce NEW CI failures
+- Local validation (build/lint/test) catches issues BEFORE pushing Warden's fixes
+- This prevents multiple push/fix cycles of Warden's own changes
 
 ### 5.1 Setup Workspace (Optimized with Branch Verification)
 
@@ -687,54 +711,67 @@ Next Steps:
 
 ## Workspace Lifecycle Summary
 
-**For absolute clarity on workspace isolation**:
+**For absolute clarity on how Warden works with EXISTING PRs**:
 
 ```
+BEFORE WARDEN:
+Developer creates PR #123 with changes → PR has CI failures
+Developer creates PR #125 with changes → PR has review comments
+Developer creates PR #127 with changes → PR has code quality issues
+
 User runs: warden (from /Users/you/myproject)
+Warden finds 3 EXISTING PRs to fix: #123, #125, #127
 
-Warden finds 3 PRs to fix: #123, #125, #127
-
-┌─────────────────────────────────────────────────────┐
-│ PR #123                                             │
-├─────────────────────────────────────────────────────┤
-│ 1. Create: /tmp/pr-review-123-1701234567/           │
-│ 2. Clone repo into that directory                   │
-│ 3. Checkout PR #123 branch                          │
-│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
-│ 5. Delete: /tmp/pr-review-123-1701234567/           │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ PR #123 (EXISTING - has CI failures)                        │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Create temp workspace: /tmp/pr-review-123-1701234567/    │
+│ 2. Clone repo + checkout PR #123's branch (has dev's code)  │
+│ 3. Analyze: Find issues (CI failures, lint errors, etc.)    │
+│ 4. Make fixes to address those issues                       │
+│ 5. Validate Warden's fixes: Build → Lint → Format → Test    │
+│ 6. If valid: Commit + Push fixes to PR #123's branch        │
+│ 7. Delete workspace: /tmp/pr-review-123-1701234567/         │
+│ Result: PR #123 now has fixes, CI runs again                │
+└─────────────────────────────────────────────────────────────┘
          ↓
-┌─────────────────────────────────────────────────────┐
-│ PR #125                                             │
-├─────────────────────────────────────────────────────┤
-│ 1. Create: /tmp/pr-review-125-1701234890/           │
-│ 2. Clone repo into that directory                   │
-│ 3. Checkout PR #125 branch                          │
-│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
-│ 5. Delete: /tmp/pr-review-125-1701234890/           │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ PR #125 (EXISTING - has review comments)                    │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Create temp workspace: /tmp/pr-review-125-1701234890/    │
+│ 2. Clone repo + checkout PR #125's branch                   │
+│ 3. Analyze: Find issues from review comments                │
+│ 4. Make fixes to address those issues                       │
+│ 5. Validate Warden's fixes: Build → Lint → Format → Test    │
+│ 6. If valid: Commit + Push fixes to PR #125's branch        │
+│ 7. Delete workspace: /tmp/pr-review-125-1701234890/         │
+│ Result: PR #125 now has fixes addressing review comments    │
+└─────────────────────────────────────────────────────────────┘
          ↓
-┌─────────────────────────────────────────────────────┐
-│ PR #127                                             │
-├─────────────────────────────────────────────────────┤
-│ 1. Create: /tmp/pr-review-127-1701235123/           │
-│ 2. Clone repo into that directory                   │
-│ 3. Checkout PR #127 branch                          │
-│ 4. Fix → Build → Lint → Format → Test → Commit → Push │
-│ 5. Delete: /tmp/pr-review-127-1701235123/           │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ PR #127 (EXISTING - has code quality issues)                │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Create temp workspace: /tmp/pr-review-127-1701235123/    │
+│ 2. Clone repo + checkout PR #127's branch                   │
+│ 3. Analyze: Find code quality issues                        │
+│ 4. Make fixes to address those issues                       │
+│ 5. Validate Warden's fixes: Build → Lint → Format → Test    │
+│ 6. If valid: Commit + Push fixes to PR #127's branch        │
+│ 7. Delete workspace: /tmp/pr-review-127-1701235123/         │
+│ Result: PR #127 now has fixes, code quality improved        │
+└─────────────────────────────────────────────────────────────┘
 
-Final check: Verify no /tmp/pr-review-* directories remain
-
-User's /Users/you/myproject: UNCHANGED, UNTOUCHED
+Final: No temp dirs remain, user's /Users/you/myproject: UNTOUCHED
 ```
 
 **Key points**:
-- Each PR is processed sequentially (not in parallel for workspace safety)
-- Each PR gets a fresh, isolated workspace
-- Workspace is deleted immediately after that PR is done
-- Your working directory is never involved
-- No state leakage between PRs
+- Warden works on PRs that ALREADY EXIST (created by developers)
+- Each PR already has code changes (that may have issues)
+- Warden identifies issues and makes FIXES to those PRs
+- Warden validates ITS fixes locally before pushing them
+- Fixes are pushed back to the SAME PR branch (updates the existing PR)
+- Your working directory is never involved - all work in temp workspaces
+- Each workspace is deleted immediately after that PR is processed
 
 ---
 
