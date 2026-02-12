@@ -117,6 +117,31 @@ Before pushing ANY fixes, follow this protocol to ensure you're on the correct P
    - Technology stack and patterns
    - Code style and review criteria
    - Known issues or technical debt
+   - **Build/test/validation commands** (CRITICAL - extract these!)
+
+2b. **Extract Validation Commands** (from repo's own documentation):
+   ```bash
+   # Look for build/test commands in AI instruction files
+   # Example from CLAUDE.md:
+   # ## Build and Test
+   # - Build: `make build`
+   # - Test: `make test`
+   # - Lint: `make lint`
+
+   # Extract and save these commands for Phase 5
+   BUILD_CMD=$(extract_from_claude_md "Build:")
+   TEST_CMD=$(extract_from_claude_md "Test:")
+   LINT_CMD=$(extract_from_claude_md "Lint:")
+
+   # Fallback to CI configs if not in AI instructions
+   if [ -z "$BUILD_CMD" ]; then
+     # Check .github/workflows/*.yml
+     # Check Makefile
+     # Check package.json
+   fi
+
+   # Use these discovered commands in Phase 5, not hard-coded defaults
+   ```
 
 3. **Codebase Context** (understand architecture):
    ```bash
@@ -399,14 +424,12 @@ echo "✓ Verified on correct branch: $PR_BRANCH for PR #${PR_NUMBER}"
 
 **GATE 1: Ensure code compiles**
 
+**IMPORTANT**: Use the build command discovered from the repo's AI instructions (Phase 2b), NOT hard-coded defaults!
+
 ```bash
-# Run build (BLOCKING - wait for completion)
-<language-build-command>
-# Examples:
-# Go: go build ./...
-# Python: python -m compileall .
-# JavaScript/TypeScript: npm run build or tsc
-# Rust: cargo build
+# Run build command discovered from CLAUDE.md/.github/workflows/Makefile/etc.
+# This was extracted in Phase 2b
+$BUILD_CMD  # e.g., "make build" or "npm run build" or "go build -tags unit,integration ./..."
 
 BUILD_EXIT_CODE=$?
 
@@ -425,14 +448,11 @@ echo "✓ Build passed for ${TIER} tier"
 
 **GATE 2: Catch code quality issues**
 
+**IMPORTANT**: Use the lint command discovered from the repo's AI instructions (Phase 2b), NOT hard-coded defaults!
+
 ```bash
-# Run linter (BLOCKING - wait for completion)
-<language-lint-command>
-# Examples:
-# Go: golangci-lint run
-# Python: ruff check . or pylint
-# JavaScript/TypeScript: eslint . or npm run lint
-# Rust: cargo clippy -- -D warnings
+# Run linter command discovered from repo documentation
+$LINT_CMD  # e.g., "make lint" or "npm run lint" or "golangci-lint run --config .golangci.yml"
 
 LINT_EXIT_CODE=$?
 
@@ -459,9 +479,12 @@ git diff --name-only origin/main | xargs <formatter>
 
 **GATE 3 (CRITICAL): Ensure functionality works**
 
+**IMPORTANT**: Use the test command discovered from the repo's AI instructions (Phase 2b), NOT hard-coded defaults!
+
 ```bash
-# Run tests (BLOCKING - wait for completion)
-<language-test-command>
+# Run test command discovered from repo documentation
+$TEST_CMD  # e.g., "make test" or "npm test" or "go test -tags unit,integration ./..."
+
 TEST_EXIT_CODE=$?
 
 # Check test result
