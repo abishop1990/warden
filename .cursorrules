@@ -2,16 +2,32 @@
 
 ## About Warden
 
-Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, 40+ configuration parameters, and 1.2-1.7x performance improvement.
+Warden v1.2: Cross-platform AI skill for comprehensive automated PR review and fixes with contextual review, 50+ configuration parameters, and 1.2-1.7x performance improvement.
+
+## Execution Mode
+
+**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
+
+- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
+- ❌ NOT: Abstract "review against principles" analysis without running tools
+
+See [docs/COMMANDS.md](docs/COMMANDS.md) for command discovery details.
+
+## Three Issue Sources
+
+Warden analyzes and fixes issues from:
+1. **CI failures** - Test failures, build errors, lint issues
+2. **Review comments** - Requested changes, unresolved feedback
+3. **Code quality** - Security, performance, architecture issues
 
 ## Workflow Overview
 
 6-phase workflow:
 1. **Discovery** - Batch API call to list PRs
-2. **Analysis** - ALL subagents for ALL PRs in parallel
-3. **Planning** - Aggregate, deduplicate, prioritize
+2. **Analysis** - ALL subagents for ALL PRs analyzing all three issue sources
+3. **Planning** - Aggregate all sources, deduplicate, prioritize
 4. **User Interaction** - Select fixes
-5. **Execution** - Incremental fixes by severity tier
+5. **Execution** - Fix all issue types, validate (build/lint/test), push
 6. **Summary** - Metrics and next steps
 
 See [README.md](README.md) for complete documentation.

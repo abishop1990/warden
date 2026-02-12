@@ -4,12 +4,29 @@
 
 Warden v1.2: Cross-platform AI skill for automated PR review and fixes.
 
-**New in v1.2**: Contextual review, 40+ configuration parameters, 5 specialized reviewers, flexible test strategies, PR integration, external webhooks.
+**New in v1.2**: Contextual review, 50+ configuration parameters, 5 specialized reviewers, flexible test strategies, PR integration, external webhooks.
 
-## Invocation
+## Execution Mode
+
+**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
+
+- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
+- ❌ NOT: Abstract "review against principles" analysis without running tools
+
+## Three Issue Sources
+
+Warden analyzes and fixes issues from:
+1. **CI failures** - Test failures, build errors, lint issues
+2. **Review comments** - Requested changes, unresolved feedback from reviewers
+3. **Code quality** - Security, performance, architecture issues from analysis
+
+## How to Invoke
+
+Use natural language with @github:
 
 ```
-@copilot /pr-review-and-fix
+@github "Review my open PRs and help fix the issues"
+@github "Analyze PR #123 and fix CI failures and review comments"
 ```
 
 ### Key Parameters (40+ available - see README.md)

@@ -4,6 +4,7 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/abishop1990/warden)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Parameters](https://img.shields.io/badge/parameters-50+-orange)](docs/PARAMETERS.md)
 
 ## Overview
 
@@ -42,46 +43,57 @@ Works across multiple AI platforms:
 
 **5-minute introduction**: See [QUICKSTART.md](QUICKSTART.md)
 
-### Basic Usage
+### How to Use (Natural Language)
 
-#### Claude Code
-```
-Review and fix PRs using the pr-review-and-fix workflow
-```
+This is an AI skill - your AI assistant reads these instructions and executes the workflow.
 
-#### GitHub Copilot
+**Claude Code**:
 ```
-@copilot /pr-review-and-fix
+"Review and fix my open PRs"
+"Help me address the issues in my pull requests"
 ```
 
-#### Cursor
+**GitHub Copilot**:
 ```
-Review and fix PRs using the pr-review-and-fix workflow
+@github "Review my open PRs and help fix the issues"
 ```
 
-### Common Commands
-
-```bash
-# Review all your open PRs with standard settings
-warden
-
-# Preview what would be fixed (no changes)
-warden --dry-run
-
-# Security-focused review with full test suite
-warden --reviewers security,testing --test-strategy full
-
-# Conservative fixes for production code
-warden --fix-strategy conservative --require-review-before-push
-
-# Comprehensive audit with all safety features
-warden \
-  --reviewers security,performance,architecture \
-  --test-strategy full \
-  --fix-strategy conservative \
-  --protect-branches main,master \
-  --create-rollback-branch
+**Cursor**:
 ```
+"Review my open PRs and fix the issues"
+"Run Warden on my pull requests"
+```
+
+The AI reads the documentation in this repo and follows the workflow automatically.
+
+### Example Requests
+
+**Basic review**:
+```
+"Review my open PRs and fix the issues"
+"Analyze my pull requests for CI failures and review comments"
+```
+
+**With specific parameters** (the AI will understand these):
+```
+"Review my PRs with security and testing focus, use full test suite"
+  → Equivalent to: --reviewers security,testing --test-strategy full
+
+"Use conservative fixes for production code and require review before pushing"
+  → Equivalent to: --fix-strategy conservative --require-review-before-push
+
+"Do a comprehensive security audit with all safety features"
+  → Equivalent to: --reviewers security,performance,architecture
+                   --test-strategy full --fix-strategy conservative
+```
+
+**Preview mode**:
+```
+"Show me what issues you'd find without making changes"
+  → Equivalent to: --dry-run
+```
+
+See [PARAMETERS.md](docs/PARAMETERS.md) for all 50+ configuration options.
 
 ## Documentation
 
@@ -174,6 +186,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Version
 
 **1.2.0** - Feature-rich release with comprehensive configurability, contextual review, platform optimizations, and enhanced safety features.
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ### What's New in 1.2
 

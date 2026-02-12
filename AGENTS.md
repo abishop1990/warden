@@ -27,7 +27,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for exact commands to execute per langu
 Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. Version 1.2 features:
 - **Massively parallel execution** across all PRs
 - **Contextual review** with PR intent, repo conventions, codebase architecture
-- **40+ configuration parameters** for complete control
+- **50+ configuration parameters** for complete control
 - **5 specialized reviewers** (security, performance, architecture, maintainability, testing)
 - **Flexible test strategies** (none/affected/full/smart)
 - **Incremental fix validation** by severity tier

@@ -4,7 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## About Warden
 
-Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (40+ parameters), and platform-specific optimizations.
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, comprehensive configurability (50+ parameters), and platform-specific optimizations.
+
+## Execution Mode
+
+**THIS IS NOT CONCEPTUAL REVIEW** - You actually execute commands and check exit codes.
+
+- ✅ Checkout PR branches, run build/lint/test commands, check exit codes, fix failures, push fixes
+- ❌ NOT: Abstract "review against principles" analysis without running tools
+
+See [docs/COMMANDS.md](docs/COMMANDS.md) for command discovery from repo docs.
+
+## Three Issue Sources
+
+Warden analyzes and fixes issues from:
+1. **CI failures** - Test failures, build errors, lint issues
+2. **Review comments** - Requested changes, unresolved feedback from reviewers
+3. **Code quality** - Security, performance, architecture issues from analysis
 
 ## Skill Overview
 
