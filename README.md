@@ -140,13 +140,15 @@ Warden automatically works with your AI assistant through platform-specific conf
 
 The correct order is:
 1. Apply fixes
-2. Run formatting
-3. **RUN TESTS** (BLOCKING - must complete)
-4. Check test result (pass/fail)
-5. Commit (only if tests passed)
-6. Push (only after commit)
+2. **RUN BUILD** (BLOCKING - ensure compilation)
+3. **RUN LINT** (BLOCKING - catch code quality issues)
+4. Run formatting (auto-fix style)
+5. **RUN TESTS** (BLOCKING - ensure functionality)
+6. Commit (only if ALL validations passed)
+7. Push (only after commit)
+8. Clean up workspace
 
-**Never push code without validation.** This is a critical safety requirement.
+**Never push code without full validation.** This prevents CI failures and multiple push/fix cycles.
 
 ## Contributing
 

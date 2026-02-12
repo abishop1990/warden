@@ -288,21 +288,35 @@ echo "✓ Verified on correct branch: $PR_BRANCH for PR #${PR_NUMBER}"
 ```
 1. Apply fixes for this tier
    ↓
-2. Run language-specific formatting
+2. **VALIDATE: Run build** ← GATE 1 (BLOCKING)
    ↓
-3. **VALIDATE: Run tests** ← CRITICAL GATE (BLOCKING)
+   Build PASSED?
+   ├─ YES → Continue to step 3
+   └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-   Tests PASSED?
+3. **VALIDATE: Run linter** ← GATE 2 (BLOCKING)
+   ↓
+   Lint PASSED?
    ├─ YES → Continue to step 4
    └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-4. Commit changes (only if tests passed)
+4. Run language-specific formatting (auto-fix style)
    ↓
-5. Push to remote (only after successful commit)
+5. **VALIDATE: Run tests** ← GATE 3 (BLOCKING - CRITICAL)
    ↓
-6. Verify CI starts
+   Tests PASSED?
+   ├─ YES → Continue to step 6
+   └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-7. Continue to next severity tier
+6. Commit changes (only if ALL validations passed)
+   ↓
+7. Push to remote (only after successful commit)
+   ↓
+8. Verify CI starts
+   ↓
+9. Clean up workspace
+   ↓
+10. Continue to next severity tier
 ```
 
 #### Step 1: Fix all issues at this tier
@@ -310,15 +324,69 @@ echo "✓ Verified on correct branch: $PR_BRANCH for PR #${PR_NUMBER}"
 - Moderate fixes (5-20 lines): Use appropriate subagent
 - Complex fixes (20+ lines, multi-file): Use specialized subagent or flag for manual review
 
-#### Step 2: Run formatting (language-specific)
+#### Step 2: **VALIDATE - Run build (BLOCKING)**
+
+**GATE 1: Ensure code compiles**
+
+```bash
+# Run build (BLOCKING - wait for completion)
+<language-build-command>
+# Examples:
+# Go: go build ./...
+# Python: python -m compileall .
+# JavaScript/TypeScript: npm run build or tsc
+# Rust: cargo build
+
+BUILD_EXIT_CODE=$?
+
+# Check build result
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+  echo "❌ BUILD FAILED - Rolling back fixes for ${TIER} tier"
+  git reset --hard HEAD  # Rollback uncommitted changes
+  # Mark tier as failed, continue to next tier
+  continue  # Skip to next tier - DO NOT CONTINUE
+fi
+
+echo "✓ Build passed for ${TIER} tier"
+```
+
+#### Step 3: **VALIDATE - Run linter (BLOCKING)**
+
+**GATE 2: Catch code quality issues**
+
+```bash
+# Run linter (BLOCKING - wait for completion)
+<language-lint-command>
+# Examples:
+# Go: golangci-lint run
+# Python: ruff check . or pylint
+# JavaScript/TypeScript: eslint . or npm run lint
+# Rust: cargo clippy -- -D warnings
+
+LINT_EXIT_CODE=$?
+
+# Check lint result
+if [ $LINT_EXIT_CODE -ne 0 ]; then
+  echo "❌ LINT FAILED - Rolling back fixes for ${TIER} tier"
+  git reset --hard HEAD  # Rollback uncommitted changes
+  # Mark tier as failed, continue to next tier
+  continue  # Skip to next tier - DO NOT CONTINUE
+fi
+
+echo "✓ Lint passed for ${TIER} tier"
+```
+
+#### Step 4: Run formatting (language-specific - auto-fix)
+
 ```bash
 # Only format changed files, not entire codebase
 git diff --name-only origin/main | xargs <formatter>
+# This auto-fixes style issues found by linter
 ```
 
-#### Step 3: **VALIDATE - Run tests (BLOCKING)**
+#### Step 5: **VALIDATE - Run tests (BLOCKING)**
 
-**THIS IS THE CRITICAL GATE - DO NOT SKIP OR RUN IN BACKGROUND**
+**GATE 3 (CRITICAL): Ensure functionality works**
 
 ```bash
 # Run tests (BLOCKING - wait for completion)
@@ -333,9 +401,9 @@ if [ $TEST_EXIT_CODE -ne 0 ]; then
   continue  # Skip to next tier - DO NOT COMMIT OR PUSH
 fi
 
-# Tests passed - create validation marker
+# ALL validations passed - create validation marker
 touch "/tmp/warden-tier-${TIER}-validated"
-echo "✓ Tests passed for ${TIER} tier"
+echo "✓ All validations passed for ${TIER} tier (build + lint + tests)"
 ```
 
 **Test Strategy Examples**:
@@ -360,7 +428,7 @@ done
 npm test -- --changedSince=origin/main
 ```
 
-#### Step 4: Commit (ONLY if tests passed)
+#### Step 6: Commit (ONLY if ALL validations passed)
 
 ```bash
 # Verify validation marker exists
@@ -390,7 +458,7 @@ else
 fi
 ```
 
-#### Step 5: Push (ONLY after successful commit)
+#### Step 7: Push (ONLY after successful commit)
 
 ```bash
 # Verify validation marker still exists
@@ -415,7 +483,7 @@ fi
 rm "/tmp/warden-tier-${TIER}-validated"
 ```
 
-#### Step 6: Verify CI starts
+#### Step 8: Verify CI starts
 
 ```bash
 # Wait briefly for CI to start
@@ -423,10 +491,30 @@ sleep 5
 gh pr checks ${PR_NUMBER} --watch
 ```
 
-#### Step 7: If tests fail, rollback tier
+#### Step 9: Clean up workspace
 
 ```bash
-# This was already handled in Step 3
+# Synchronous cleanup - ensure it completes
+if [ -d "$WORKSPACE" ]; then
+  echo "Cleaning up workspace: $WORKSPACE"
+  cd /
+  rm -rf "$WORKSPACE"
+
+  # Verify cleanup completed
+  if [ -d "$WORKSPACE" ]; then
+    echo "⚠️  WARNING: Workspace cleanup failed"
+  else
+    echo "✓ Workspace cleaned up successfully"
+  fi
+else
+  echo "✓ Workspace already cleaned"
+fi
+```
+
+#### Step 10: If any validation fails, rollback tier
+
+```bash
+# This was already handled in Steps 2, 3, and 5
 # git reset --hard HEAD  # Rollback uncommitted changes
 # Flag issues for manual review
 # Continue to next tier without committing or pushing
@@ -449,11 +537,37 @@ gh pr checks ${PR_NUMBER} --watch
 - Chat mode for moderate complexity
 - Workspace mode for complex changes
 
-### 5.3 Cleanup (Background)
+### 5.3 Cleanup (Verified)
+
+**IMPORTANT**: Cleanup must complete successfully to avoid disk space issues.
 
 ```bash
-# Cleanup in background to not block next PR
-(cd / && rm -rf "$WORKSPACE") &
+# Synchronous cleanup per tier - ensures completion
+if [ -d "$WORKSPACE" ]; then
+  echo "Cleaning up workspace: $WORKSPACE"
+  WORKSPACE_TO_DELETE="$WORKSPACE"
+  cd /  # Change out of workspace before deleting
+
+  rm -rf "$WORKSPACE_TO_DELETE"
+
+  # Verify cleanup completed
+  if [ -d "$WORKSPACE_TO_DELETE" ]; then
+    echo "⚠️  WARNING: Workspace cleanup failed for $WORKSPACE_TO_DELETE"
+    echo "Manual cleanup required"
+  else
+    echo "✓ Workspace cleaned up successfully"
+  fi
+fi
+
+# After all tiers complete, verify no lingering workspaces
+echo "Checking for lingering workspaces..."
+LINGERING=$(find /tmp -maxdepth 1 -name "pr-review-*" -type d 2>/dev/null | wc -l)
+if [ "$LINGERING" -gt 0 ]; then
+  echo "⚠️  WARNING: $LINGERING workspace(s) not cleaned up"
+  find /tmp -maxdepth 1 -name "pr-review-*" -type d 2>/dev/null
+else
+  echo "✓ All workspaces cleaned up"
+fi
 ```
 
 ---

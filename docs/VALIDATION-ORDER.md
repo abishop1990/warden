@@ -29,21 +29,35 @@ For each severity tier (Critical → High → Medium → Low):
 
 1. Apply fixes for this tier
    ↓
-2. Run language-specific formatting
+2. **VALIDATE: Run build** (ensure code compiles)
    ↓
-3. **VALIDATE: Run tests**  ← CRITICAL GATE
+   Build PASSED?
+   ├─ YES → Continue to step 3
+   └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-   Tests PASSED?
+3. **VALIDATE: Run linter** (catch code quality issues)
+   ↓
+   Lint PASSED?
    ├─ YES → Continue to step 4
    └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-4. Commit changes (only if tests passed)
+4. Run language-specific formatting (auto-fix style)
    ↓
-5. **Push to remote** (only after successful commit)
+5. **VALIDATE: Run tests** ← CRITICAL GATE
    ↓
-6. Verify CI starts
+   Tests PASSED?
+   ├─ YES → Continue to step 6
+   └─ NO  → ROLLBACK fixes, ABORT tier, continue to next tier
    ↓
-7. Continue to next severity tier
+6. Commit changes (only if ALL validations passed)
+   ↓
+7. **Push to remote** (only after successful commit)
+   ↓
+8. Verify CI starts
+   ↓
+9. Clean up workspace
+   ↓
+10. Continue to next severity tier
 ```
 
 ---
@@ -54,26 +68,45 @@ For each severity tier (Critical → High → Medium → Low):
 ```bash
 # After applying fixes, BEFORE committing:
 
-# 1. Format code
+# 1. RUN BUILD (BLOCKING)
+<language-build-command>
+BUILD_EXIT_CODE=$?
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+  echo "❌ BUILD FAILED - Rolling back fixes"
+  git reset --hard HEAD
+  exit 1  # ABORT - do not continue
+fi
+
+# 2. RUN LINTER (BLOCKING)
+<language-lint-command>
+LINT_EXIT_CODE=$?
+if [ $LINT_EXIT_CODE -ne 0 ]; then
+  echo "❌ LINT FAILED - Rolling back fixes"
+  git reset --hard HEAD
+  exit 1  # ABORT - do not continue
+fi
+
+# 3. RUN FORMATTER (auto-fix style issues)
 git diff --name-only | xargs <language-formatter>
 
-# 2. RUN TESTS (BLOCKING)
+# 4. RUN TESTS (BLOCKING)
 <language-test-command>
 TEST_EXIT_CODE=$?
-
-# 3. CHECK TEST RESULT
 if [ $TEST_EXIT_CODE -ne 0 ]; then
   echo "❌ TESTS FAILED - Rolling back fixes"
-  git reset --hard HEAD  # Rollback uncommitted changes
+  git reset --hard HEAD
   exit 1  # ABORT - do not commit or push
 fi
 
-# 4. Only if tests passed, commit
+# 5. Only if ALL validations passed, commit
 git add <changed-files>
 git commit -m "[PR #${PR_NUMBER}] Fix: ${TIER} - ${DESCRIPTION}"
 
-# 5. Only if commit succeeded, push
+# 6. Only if commit succeeded, push
 git push origin ${PR_BRANCH}
+
+# 7. Clean up workspace
+cd / && rm -rf "$WORKSPACE"
 ```
 
 ### Gate 2: Post-Push Verification
@@ -152,16 +185,43 @@ For each severity tier:
 1. Apply all fixes at this tier
    → Use main agent (simple) or Bash/general-purpose agent (complex)
 
-2. Run formatting on changed files ONLY
-   → git diff --name-only | xargs formatter
+2. **CRITICAL: RUN BUILD BEFORE CONTINUING**
+   → BLOCKING operation - MUST wait for completion
+   → Use Bash agent: run_build_for_tier
+   → Capture exit code
+   → Log output
 
-3. **CRITICAL: RUN TESTS BEFORE COMMIT**
+   if exit code != 0:
+     → Log "Build failed for ${TIER} tier"
+     → git reset --hard HEAD  (rollback fixes)
+     → Mark tier as failed
+     → Continue to next tier (don't push anything)
+     → NEVER commit or push
+
+3. **CRITICAL: RUN LINTER BEFORE CONTINUING**
+   → BLOCKING operation - MUST wait for completion
+   → Use Bash agent: run_lint_for_tier
+   → Capture exit code
+   → Log output
+
+   if exit code != 0:
+     → Log "Lint failed for ${TIER} tier"
+     → git reset --hard HEAD  (rollback fixes)
+     → Mark tier as failed
+     → Continue to next tier (don't push anything)
+     → NEVER commit or push
+
+4. Run formatting on changed files ONLY
+   → git diff --name-only | xargs formatter
+   → Auto-fix style issues
+
+5. **CRITICAL: RUN TESTS BEFORE COMMIT**
    → BLOCKING operation - MUST wait for completion
    → Use Bash agent: run_tests_for_tier
    → Capture exit code
    → Log output
 
-4. **CHECK TEST RESULT**
+6. **CHECK ALL VALIDATION RESULTS**
    if exit code != 0:
      → Log "Tests failed for ${TIER} tier"
      → git reset --hard HEAD  (rollback fixes)
@@ -170,23 +230,27 @@ For each severity tier:
      → NEVER commit or push
 
    if exit code == 0:
-     → Log "Tests passed for ${TIER} tier"
+     → Log "All validations passed for ${TIER} tier"
      → Create validation marker
-     → Continue to step 5
+     → Continue to step 7
 
-5. Commit (ONLY if step 4 passed)
+7. Commit (ONLY if all validations passed)
    → git add <changed-files>
    → git commit -m "..."
    → Verify commit created
 
-6. Push (ONLY if step 5 succeeded)
+8. Push (ONLY if step 7 succeeded)
    → Verify validation marker exists
    → git push origin ${PR_BRANCH}
    → Verify push succeeded
 
-7. Verify CI
+9. Verify CI
    → sleep 5
    → gh pr checks ${PR_NUMBER}
+
+10. Clean up workspace
+   → cd / && rm -rf "$WORKSPACE"
+   → Verify cleanup completed
 ```
 
 ### GitHub Copilot (MANDATORY SEQUENCE)
@@ -391,16 +455,26 @@ fi
 
 **THE GOLDEN RULE**:
 ```
-NO PUSH WITHOUT VALIDATION
-NO COMMIT WITHOUT TESTS PASSING
-TESTS MUST COMPLETE BEFORE COMMIT
+NO PUSH WITHOUT FULL VALIDATION
+NO COMMIT WITHOUT ALL CHECKS PASSING
+BUILD + LINT + TESTS MUST COMPLETE BEFORE COMMIT
 ```
 
 **If in doubt, the order is**:
 1. Fix
-2. Format
-3. **TEST** ← BLOCKING GATE
-4. Commit (conditional on #3)
-5. Push (conditional on #4)
+2. **BUILD** ← BLOCKING GATE 1 (ensure compilation)
+3. **LINT** ← BLOCKING GATE 2 (catch code quality issues)
+4. Format (auto-fix style)
+5. **TEST** ← BLOCKING GATE 3 (ensure functionality)
+6. Commit (conditional on #2, #3, #5 ALL passing)
+7. Push (conditional on #6)
+8. Clean up workspace
 
 **Any deviation from this order is a critical bug and must be fixed immediately.**
+
+**Why all three validations?**
+- **Build**: Catches syntax errors, type errors, compilation failures
+- **Lint**: Catches code quality issues, style violations, potential bugs
+- **Tests**: Ensures functionality works correctly
+
+Skipping any of these leads to CI failures after push, causing multiple push/fix cycles.
