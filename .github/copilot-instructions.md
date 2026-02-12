@@ -4,7 +4,7 @@
 
 Warden v1.2: Cross-platform AI skill for automated PR review and fixes.
 
-**New in v1.2**: Contextual review, streamlined configuration (23 core parameters), 5 specialized reviewers, flexible test strategies, PR integration.
+**New in v1.2**: Contextual review, streamlined configuration (25 core parameters + config files), 5 specialized reviewers, flexible test strategies, PR integration.
 
 **Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md).
 
@@ -50,7 +50,7 @@ cp -r ~/warden/docs /path/to/project/docs/
 # Update: cd ~/warden && git pull
 ```
 
-### Key Parameters (23 core + 19 advanced - see PARAMETERS.md)
+### Key Parameters (25 core + 19 advanced - see PARAMETERS.md)
 - `--author <username>` - Review PRs by specific author
 - `--repo <owner/repo>` - Target specific repository
 - `--reviewers security,performance,architecture` - Custom reviewers
@@ -249,7 +249,7 @@ if [ -z "$PR_BRANCH" ]; then
   exit 1
 fi
 
-WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
+WORKSPACE="/tmp/warden-repos/pr-${PR_NUMBER}-$(date +%s)"
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
 

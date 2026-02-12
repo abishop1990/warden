@@ -31,7 +31,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for exact commands to execute per langu
 Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. Version 1.2 features:
 - **Massively parallel execution** across all PRs
 - **Contextual review** with PR intent, repo conventions, codebase architecture
-- **Streamlined configuration** with 23 core parameters (42 total)
+- **Streamlined configuration** with 25 core parameters (44 total) and config file support
 - **5 specialized reviewers** (security, performance, architecture, maintainability, testing)
 - **Flexible test strategies** (none/affected/full/smart)
 - **Incremental fix validation** by severity tier
@@ -77,14 +77,22 @@ AI assistants need explicit reference to "Warden" to use this skill:
 
 When user doesn't specify parameters, use these defaults:
 
+- **Workspace**: Isolated temp workspaces in `/tmp/warden-repos/` (never modify user's working directory)
 - **Review Depth**: Standard (1 generalist reviewer per PR)
 - **Test Strategy**: Affected (test only changed packages)
 - **Fix Strategy**: Balanced (high + medium confidence fixes)
+
+**Configuration Files**: Load settings from `~/.warden/config.yml` (global) or `.warden/config.yml` (project-specific). See [CONFIGURATION.md](docs/CONFIGURATION.md) for setup.
+
+**Workspace Modes**:
+- **Isolated (default)**: Temp workspaces in `/tmp/warden-repos/pr-{number}-{timestamp}/` - safe, parallel-capable
+- **In-place**: Run in user's current repo - slower, for complex setup (databases, custom tooling)
 
 **Examples of user specifying non-defaults:**
 - "Use comprehensive review" → 3+ reviewers per PR
 - "Run full test suite" → All tests, not just affected
 - "Be conservative with fixes" → High confidence only
+- "Run in my current repo" → In-place mode (slower but handles complex setup)
 
 ## Phase 3: Validation Pre-Check
 

@@ -124,7 +124,7 @@ You can specify parameters in natural language. The AI understands:
 - "Create rollback branch"
 - "Protect main and master branches"
 
-See [PARAMETERS.md](docs/PARAMETERS.md) for all options (23 core + 19 advanced).
+See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETERS.md](docs/PARAMETERS.md) for all options (25 core + 19 advanced).
 
 ## Next Steps
 

@@ -15,7 +15,7 @@ User must explicitly reference "Warden" for Claude to use this skill:
 
 ## About Warden
 
-Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, streamlined configuration (23 core parameters), and platform-specific optimizations.
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. Version 1.2 includes contextual review, streamlined configuration (25 core parameters + config files), and platform-specific optimizations.
 
 **Execution Mode**: Warden executes actual commands and checks exit codes (see AGENTS.md for details).
 
@@ -278,23 +278,24 @@ See README.md for complete language-specific command reference.
 2. **Always verify branch** - Get branch name from `gh pr view --json headRefName` before checkout
 3. **Use `gh pr checkout <number>`** - Safest method (handles verification automatically)
 4. **Always use parallel Task calls** when launching multiple Phase 2 subagents
-5. **Never modify user's working directory** - always use temporary workspace
+5. **Use isolated workspaces** - default `/tmp/warden-repos/` (never modify user's working directory unless `--in-place`)
 6. **Respect test strategy** - skip tests if `--test-strategy none` or file types match `--skip-tests-for`
 7. **Use Plan agent for Phase 3** - better at structured aggregation
 8. **Shallow clone** for workspace setup (unless `--reuse-workspace`)
 9. **Test according to strategy** - affected/full/smart/none
 10. **Rollback per-tier** - don't throw away good fixes
-11. **Clean up in background** (unless `--keep-workspace`)
+11. **Clean up workspaces** after each PR (unless `--keep-workspace`)
 12. **Respect fix limits** - honor `--max-fixes-per-tier`
 13. **Flag based on strategy** - conservative flags more, aggressive flags less
 14. **Comment on PR** if `--comment-on-pr` is set
-15. **Respect parallelization limits** - `--max-parallel-prs` and `--max-parallel-agents`
+15. **Respect parallelization limits** - `--max-parallel-prs` batching
 16. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
-17. **Send notifications** if webhook/Slack/Jira configured
+17. **Load configuration** from `~/.warden/config.yml` or `.warden/config.yml` if present
 
 ## Available Information
 
 - Full workflow documentation: [README.md](README.md)
 - Platform-agnostic guidance: [AGENTS.md](AGENTS.md)
+- Configuration system: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 - GitHub Copilot instructions: [.github/copilot-instructions.md](.github/copilot-instructions.md)
 - Cursor rules: [.cursorrules](.cursorrules)

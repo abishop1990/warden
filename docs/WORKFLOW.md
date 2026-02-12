@@ -94,7 +94,7 @@ Fix: 1) All Critical+High  2) Critical only  3) Skip
 ```
 FOR EACH PR:
 
-  1. Create temp workspace: /tmp/pr-review-${PR_NUMBER}-${TIMESTAMP}/
+  1. Create temp workspace: /tmp/warden-repos/pr-${PR_NUMBER}-${TIMESTAMP}/
   2. Clone repo, checkout PR branch
   3. FOR EACH TIER (Critical → High → Medium → Low):
        a. Apply fixes
@@ -104,6 +104,12 @@ FOR EACH PR:
   4. Cleanup workspace
   5. Next PR
 ```
+
+**Workspace modes**:
+- **Isolated (default)**: Temp workspace in `/tmp/warden-repos/` - safe, parallel-capable
+- **In-place**: Run in current repo - slower, for complex setup (use `--in-place`)
+
+See [CONFIGURATION.md](CONFIGURATION.md) for workspace configuration details.
 
 **Validation sequence** (see VALIDATION-ORDER.md):
 ```bash

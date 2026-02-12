@@ -1,8 +1,8 @@
 # Warden - Parameter Reference (v1.2)
 
-**Streamlined for v1.2**: Reduced from 59 to ~25 core parameters, focusing on natural language expressibility and avoiding premature optimization.
+**Streamlined for v1.2**: Reduced from 59 to 25 core parameters, focusing on natural language expressibility and avoiding premature optimization.
 
-## Core Parameters (23)
+## Core Parameters (25)
 
 Essential parameters for everyday use. These cover 95% of real-world scenarios.
 
@@ -122,12 +122,31 @@ Max concurrent PR analysis (batching).
 
 ---
 
-### Workspace (1)
+### Workspace (3)
+
+#### `--workspace-root <path>`
+Root directory for temporary PR workspaces.
+- **Default**: `/tmp/warden-repos`
+- **Example**: `--workspace-root /custom/workspace`
+- **Behavior**: Creates subdirectories like `/tmp/warden-repos/pr-123-1234567890/`
+- **Note**: All PR workspaces organized under this root for easy cleanup
+
+#### `--in-place`
+Run in current repository without creating temp workspaces.
+- **Default**: `false` (use isolated workspaces)
+- **Example**: `--in-place`
+- **Use case**: Repos with complex local setup (databases, custom tooling)
+- **⚠️ WARNING**:
+  - Slower (no parallel processing)
+  - Modifies your working directory
+  - Ensure clean git state first: `git status`
+- **Recommended**: Only use when isolated workspaces can't handle repo setup
 
 #### `--keep-workspace`
-Don't clean up workspace (for debugging).
+Don't clean up workspace after completion (for debugging).
 - **Default**: `false`
 - **Example**: `--keep-workspace`
+- **Note**: Useful when you need to inspect workspace state after errors
 
 ---
 

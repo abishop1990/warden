@@ -1,0 +1,168 @@
+# Warden Configuration Example
+# Copy this file to ~/.warden/config.yml for global config
+# Or to .warden/config.yml in your project root for project-specific config
+
+# ==============================================================================
+# Workspace Configuration
+# ==============================================================================
+workspace:
+  # Root directory for temporary PR workspaces
+  # Default: /tmp/warden-repos
+  root: /tmp/warden-repos
+
+  # Run in current repository without creating temp workspaces
+  # WARNING: Slower (no parallel processing) and modifies working directory
+  # Use for repos with complex local setup (databases, custom tooling)
+  # Default: false
+  in_place: false
+
+  # Keep workspace when errors occur (useful for debugging)
+  # Default: false
+  keep_on_error: false
+
+  # Reuse workspace across PRs from the same repo
+  # Default: false
+  reuse: false
+
+# ==============================================================================
+# Default Parameters
+# ==============================================================================
+defaults:
+  # ---------------------------------------------------------------------------
+  # PR Selection
+  # ---------------------------------------------------------------------------
+  author: "@me"                      # Review PRs by this author
+  state: open                        # open, closed, or all
+  limit: 10                          # Max PRs to review (auto-select top by priority)
+
+  # ---------------------------------------------------------------------------
+  # Review Configuration
+  # ---------------------------------------------------------------------------
+  # Available: generalist, security, performance, architecture, maintainability, testing
+  reviewers: generalist              # Comma-separated list
+
+  # ---------------------------------------------------------------------------
+  # Test Strategy
+  # ---------------------------------------------------------------------------
+  test_strategy: affected            # none, affected, full, smart
+  test_timeout: 300                  # Seconds (5 minutes default)
+  parallel_tests: true               # Run tests in parallel when supported
+
+  # ---------------------------------------------------------------------------
+  # Fix Strategy
+  # ---------------------------------------------------------------------------
+  fix_strategy: balanced             # conservative, balanced, aggressive
+
+  # ---------------------------------------------------------------------------
+  # Safety Features
+  # ---------------------------------------------------------------------------
+  max_files_changed: null            # null = unlimited, or set max (e.g., 20)
+  protect_branches:                  # Never push to these branches
+    - main
+    - master
+    - production
+
+  # ---------------------------------------------------------------------------
+  # PR Integration
+  # ---------------------------------------------------------------------------
+  comment_on_pr: false               # Post findings as PR comment
+
+  # ---------------------------------------------------------------------------
+  # Performance
+  # ---------------------------------------------------------------------------
+  max_parallel_prs: 5                # Max concurrent PR analysis (batching)
+
+  # ---------------------------------------------------------------------------
+  # Workspace
+  # ---------------------------------------------------------------------------
+  keep_workspace: false              # Keep workspace after completion (debugging)
+
+  # ---------------------------------------------------------------------------
+  # Output
+  # ---------------------------------------------------------------------------
+  output_format: text                # text, json, markdown, html
+  verbose: false                     # Detailed logging
+
+  # ---------------------------------------------------------------------------
+  # Language & Tooling
+  # ---------------------------------------------------------------------------
+  language: null                     # null = auto-detect, or: go, python, javascript, typescript, rust
+  # formatter: "black --line-length 100"  # Uncomment to override language default
+  # linter: "eslint --fix"                # Uncomment to override language default
+
+  # ---------------------------------------------------------------------------
+  # File Filtering
+  # ---------------------------------------------------------------------------
+  ignore_paths:                      # Skip these paths in review
+    - vendor/
+    - node_modules/
+    - "*.pb.go"
+    - "*_generated.go"
+    - dist/
+    - build/
+  # focus_paths:                     # Uncomment to only review specific paths
+  #   - src/
+  #   - cmd/
+
+# ==============================================================================
+# Platform-Specific Settings
+# ==============================================================================
+platform:
+  # Claude Code settings
+  claude_code:
+    model: sonnet                    # sonnet (default), opus, haiku
+
+  # GitHub Copilot settings
+  github_copilot:
+    # Add Copilot-specific settings here as needed
+
+  # Cursor settings
+  cursor:
+    # Add Cursor-specific settings here as needed
+
+# ==============================================================================
+# Advanced/Experimental Parameters
+# ==============================================================================
+# Uncomment to use advanced features
+advanced:
+  # Safety (Extended)
+  # require_review_before_push: false
+  # check_conflicts_before_fix: true
+  # create_rollback_branch: false
+
+  # PR Integration (Extended)
+  # comment_template: .github/warden-comment.md
+  # update_comment: false
+  # auto_label: false
+  # label_prefix: "warden-"
+
+  # Test Strategy (Extended)
+  # test_on_severity: all            # all, critical,high, critical
+  # skip_tests_for:
+  #   - .md
+  #   - .yml
+  #   - .yaml
+
+  # Fix Strategy (Extended)
+  # max_fixes_per_tier: null         # null = unlimited
+  # auto_commit_on_success: true
+
+  # Workspace (Extended)
+  # workspace_dir: /tmp/pr-review-*  # Overrides workspace.root for specific pattern
+
+  # Output (Extended)
+  # save_report: warden-report.md
+  # quiet: false
+  # severity: null                   # null = show all, or: critical, high, medium, low
+
+  # File Filtering (Extended)
+  # max_file_size: null              # null = unlimited, or max lines
+  # skip_generated: true
+
+  # Advanced Options
+  # review_rules: .warden-rules.yml
+  # diff_context: 3
+  # incremental_review: false
+  # include_drafts: false
+  # draft_strategy: review-only      # review-only, fix, skip
+  # baseline_commit: null            # null or commit SHA

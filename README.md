@@ -4,7 +4,7 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/abishop1990/warden)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Parameters](https://img.shields.io/badge/parameters-23_core-orange)](docs/PARAMETERS.md)
+[![Parameters](https://img.shields.io/badge/parameters-25_core-orange)](docs/PARAMETERS.md)
 
 ## Overview
 
@@ -31,7 +31,7 @@ Works across multiple AI platforms:
 - **Massively Parallel Analysis**: Analyzes multiple PRs simultaneously with specialized agents
 - **Contextual Review**: Understands PR intent, repo conventions, and codebase architecture
 - **Complete Validation**: Build + Lint + Test before every push (prevents CI failures)
-- **Fully Configurable**: 23 core parameters for review depth, testing, fixes, and output (42 total including advanced)
+- **Fully Configurable**: 25 core parameters with config file support (`~/.warden/config.yml`) - 44 total including advanced
 - **Multiple Review Specialists**: Security, performance, architecture, maintainability, testing experts
 - **Flexible Test Strategies**: none/affected/full/smart with granular control
 - **CI/CD Integration**: Detects and diagnoses test failures, build errors, and lint issues
@@ -128,7 +128,7 @@ Copilot reads `.github/copilot-instructions.md` automatically when in this repo.
 "Execute Warden on PRs #123, #125, and #127"
 ```
 
-See [PARAMETERS.md](docs/PARAMETERS.md) for all configuration options (23 core + 19 advanced).
+See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETERS.md](docs/PARAMETERS.md) for all options (25 core + 19 advanced).
 
 ## Documentation
 
@@ -136,6 +136,7 @@ See [PARAMETERS.md](docs/PARAMETERS.md) for all configuration options (23 core +
 
 - **[INSTALL.md](INSTALL.md)** - Installation guide for all platforms
 - **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+- **[CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration system (config files, workspace modes, setup)
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Real-world usage examples for every scenario
 - **[PARAMETERS.md](docs/PARAMETERS.md)** - Complete reference for all configuration options
 - **[SAFETY.md](docs/SAFETY.md)** - Safety features and best practices

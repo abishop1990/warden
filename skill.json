@@ -43,8 +43,8 @@
     "incremental-validation"
   ],
   "configuration": {
-    "parameters": 42,
-    "coreParameters": 23,
+    "parameters": 44,
+    "coreParameters": 25,
     "reviewers": ["generalist", "security", "performance", "architecture", "maintainability", "testing"],
     "testStrategies": ["none", "affected", "full", "smart"],
     "fixStrategies": ["conservative", "balanced", "aggressive"]
