@@ -87,6 +87,55 @@ See [PARAMETERS.md](../docs/PARAMETERS.md) for complete parameter reference.
 
 See [docs/WORKFLOW.md](../docs/WORKFLOW.md) for complete workflow details.
 
+## Phase 3: Planning (CI Re-verification MANDATORY)
+
+**⚠️ CRITICAL (Gap #16 fix)**: CI status can change between Phase 1 and Phase 4. MUST re-verify before presenting report.
+
+**Step 1: CI Re-verification** (BLOCKING):
+```bash
+echo "=== Phase 3: CI Re-verification (Gap #16 Prevention) ==="
+
+# For each PR, re-fetch CI and compare with Phase 1
+for PR_NUM in ${SELECTED_PRS[@]}; do
+  # Fetch FRESH CI status
+  CURRENT_CI=$(gh pr checks ${PR_NUM} --json name,status,conclusion)
+  CURRENT_FAILURES=$(echo "$CURRENT_CI" | jq 'map(select(.conclusion == "failure")) | length')
+
+  # Compare with Phase 1 initial state
+  INITIAL_FAILURES=${INITIAL_CI_STATE[$PR_NUM]}
+
+  if [ "$INITIAL_FAILURES" != "$CURRENT_FAILURES" ]; then
+    echo "⚠️  PR #${PR_NUM}: CI STATUS CHANGED!"
+    echo "   Phase 1: ${INITIAL_FAILURES} failures"
+    echo "   Current: ${CURRENT_FAILURES} failures"
+
+    # Flag for Phase 4 reporting
+    CI_CHANGED[$PR_NUM]=true
+
+    # Save fresh CI data
+    echo "$CURRENT_CI" > "/tmp/warden-pr-${PR_NUM}-ci-fresh.json"
+
+    # Extract new failures
+    if [ $CURRENT_FAILURES -gt $INITIAL_FAILURES ]; then
+      echo "   ⚠️  NEW FAILURES DETECTED:"
+      echo "$CURRENT_CI" | jq -r '.[] | select(.conclusion == "failure") | "      - \(.name)"'
+    fi
+  fi
+done
+```
+
+**Why this matters**:
+- Flaky tests can start failing after Phase 1
+- Concurrent merges can break CI
+- Presenting stale CI data leads to wrong fix recommendations
+
+**Step 2: Aggregate Findings**:
+- Deduplicate issues across sources
+- Sort by severity (Critical → High → Medium → Low)
+- Flag escalations (architectural issues, >100 LOC changes)
+
+See [docs/CI-REVERIFICATION.md](../docs/CI-REVERIFICATION.md) for complete details.
+
 ## Phase 4: User Interaction (MANDATORY)
 
 **CRITICAL**: Before executing ANY fixes, you MUST consolidate findings, present comprehensive report, ask for approval, and WAIT for user response.

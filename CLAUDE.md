@@ -220,15 +220,25 @@ Task(general-purpose, "Architecture review PR #123 WITH CONTEXT: focus on design
 
 **Phase 3: Planning**
 - **Agent**: `Plan` agent
-- **Task**: Aggregate findings from Phase 2, deduplicate, enrich with severity/complexity, group related issues, generate structured report
+- **Task**:
+  1. **CI Re-verification (MANDATORY - Gap #16 fix)**: Re-check CI status for all PRs, compare with Phase 1, flag changes
+     ```bash
+     # For each PR, re-fetch CI and compare
+     gh pr checks ${PR} --json name,status,conclusion
+     # Flag if failures changed since Phase 1
+     # See docs/CI-REVERIFICATION.md
+     ```
+  2. **Aggregate findings**: From Phase 2, deduplicate, enrich with severity/complexity, group related issues
+  3. **Generate structured report**: With FRESH CI data and staleness warnings
 - **Why**: Architectural task requiring structured analysis and design thinking
-- **Input**: All findings from Phase 2 subagents
-- **Output**: Structured issue list per PR with severity, complexity, grouping
+- **Input**: All findings from Phase 2 subagents + FRESH CI data
+- **Output**: Structured issue list per PR with severity, complexity, grouping, CI status changes
 
 **Phase 4: User Interaction (MANDATORY)**
 - **Agent**: Main agent
-- **Task**: Present report, get approval, WAIT for response
+- **Task**: Present report with FRESH CI data (from Phase 3 re-check), get approval, WAIT for response
 - **Why**: User interaction happens in main agent
+- **CI Staleness Warnings** (Gap #16 fix): Report MUST show if CI changed since Phase 1
 - **Details**: See AGENTS.md Phase 4 for complete requirements (report format, approval options, wait protocol)
 
 **Phase 6: Execution**

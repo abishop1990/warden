@@ -14,11 +14,12 @@ Warden is an AI coding assistant skill that reviews **existing Pull Requests**, 
 1. Developer creates PR (may have CI failures, review feedback, code issues)
 2. **Warden discovers validation commands** (Phase 0 - MANDATORY) from repo's AI instructions, CI configs, and saves to artifact
 3. Warden analyzes **three issue sources**: CI failures + review comments + code quality
-4. Warden identifies and prioritizes issues by severity
-5. Warden makes fixes addressing **all three sources**
-6. **Warden validates before push** using discovered commands (build → lint → format → test)
-7. Warden pushes fixes back to the same PR only if ALL validations pass
-8. PR is updated with fixes, CI runs again
+4. **Warden re-verifies CI status** (Gap #16 fix) before presenting report - prevents stale data
+5. Warden identifies and prioritizes issues by severity using FRESH CI data
+6. Warden makes fixes addressing **all three sources**
+7. **Warden validates before push** using discovered commands (build → lint → format → test)
+8. Warden pushes fixes back to the same PR only if ALL validations pass
+9. PR is updated with fixes, CI runs again
 
 Works across multiple AI platforms:
 - **Claude Code** - Anthropic's AI pair programmer
@@ -182,8 +183,11 @@ Warden is highly configurable through natural language or parameters:
 
 **Detailed documentation**:
 - [CONFIGURATION.md](docs/CONFIGURATION.md) - Config files, workspace modes, setup
-- [PARAMETERS.md](docs/PARAMETERS.md) - Complete parameter reference (25 core + 19 advanced)
+- [PARAMETERS.md](docs/PARAMETERS.md) - Complete parameter reference (28 core + 19 advanced)
 - [EXAMPLES.md](docs/EXAMPLES.md) - Real-world usage examples
+- [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) - Validation command discovery (Gap #13 fix)
+- [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) - CI status re-checking (Gap #16 fix)
+- [REVIEW-COMMENTS.md](docs/REVIEW-COMMENTS.md) - Review comment thread fetching (Gap #15 fix)
 
 ## How Warden Ensures Quality
 
@@ -193,6 +197,13 @@ Warden is highly configurable through natural language or parameters:
 - Language-specific configs (Makefile, package.json)
 - Saves to artifact: `.warden-validation-commands.sh`
 
+**Phase 4 (MANDATORY)**: Re-verifies CI status before presenting report
+- **Gap #16 fix**: Prevents stale CI data from causing wrong recommendations
+- Re-fetches CI status for all PRs
+- Compares with Phase 1 initial state
+- Flags PRs where CI changed (new failures or resolutions)
+- Cannot present report without fresh CI check
+
 **Phase 6 (MANDATORY)**: Validates all fixes before pushing
 - **BLOCKING CHECK**: Verifies Phase 0 artifact exists
 - Sources discovered commands from artifact
@@ -201,9 +212,11 @@ Warden is highly configurable through natural language or parameters:
 - Runs tests to ensure functionality
 - Only commits and pushes if ALL validations pass
 
-**Enforcement**: Phase 6 cannot execute without Phase 0 artifact - mechanically prevents skipping validation.
+**Enforcement**:
+- Phase 6 cannot execute without Phase 0 artifact - mechanically prevents skipping validation
+- Phase 5 (User Interaction) uses fresh CI data from Phase 4 - prevents stale recommendations
 
-This prevents broken CI and ensures fixes don't introduce new issues. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) for technical details.
+This prevents broken CI, ensures fixes don't introduce new issues, and guarantees accurate reporting. See [PHASE-0-DISCOVERY.md](docs/PHASE-0-DISCOVERY.md) and [CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) for technical details.
 
 ## Contributing
 

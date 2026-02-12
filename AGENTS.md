@@ -86,11 +86,11 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed cleanup instructions.
 8-phase workflow for PR review and automated fixes:
 
 0. **Command Discovery (MANDATORY)** - Discover and save validation commands to artifact - BLOCKING for Phase 6
-1. **PR Discovery** - Batch API call to list PRs, auto-select top 10 by priority if >10 found
+1. **PR Discovery** - Batch API call to list PRs, save initial CI state, auto-select top 10 by priority if >10 found
 2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL sources (CI + Review + Code + Ticket) regardless of CI status
 3. **Validation** - Verify PR branch integrity, run build to check compilation
-4. **Planning** - Aggregate findings, deduplicate, prioritize by severity, flag escalations
-5. **User Interaction** - **MANDATORY: Compile report, ask approval, WAIT for response**
+4. **Planning** - **CI Re-verification (Gap #16 fix): Re-check CI, compare with Phase 1, flag changes** → Aggregate findings, deduplicate, prioritize by severity, flag escalations
+5. **User Interaction** - **MANDATORY: Compile report with FRESH CI data and staleness warnings, ask approval, WAIT for response**
 6. **Execution** - **MANDATORY: Verify Phase 0 artifact exists, source commands, validate before push**
 7. **Summary** - Report metrics and next steps
 
@@ -202,7 +202,27 @@ fi
 
 ## Phase 4: Planning
 
-**Aggregate findings** from Phase 2 (Analysis) and Phase 3 (Validation).
+**Step 1: CI Re-verification (MANDATORY - Gap #16 fix)**
+
+**⚠️ CRITICAL**: CI status can change between Phase 1 and Phase 5. MUST re-check before presenting report.
+
+For each PR:
+1. Re-fetch CI status: `gh pr checks ${PR} --json name,status,conclusion`
+2. Compare with Phase 1 initial state
+3. Flag PRs where CI changed (failures increased/decreased)
+4. Save fresh CI data for Phase 5 report
+5. Cannot proceed to Phase 5 without fresh CI check
+
+**Why this matters**:
+- Flaky tests can start failing after Phase 1
+- Concurrent merges can break CI
+- Presenting stale CI data leads to wrong fix recommendations
+
+See [docs/CI-REVERIFICATION.md](docs/CI-REVERIFICATION.md) for complete enforcement details.
+
+**Step 2: Aggregate Findings**
+
+**Aggregate findings** from Phase 2 (Analysis), Phase 3 (Validation), and FRESH CI data.
 
 **Categorize by severity** and **identify escalation triggers**:
 - Fix requires API changes (adding fields, changing signatures)
@@ -210,17 +230,19 @@ fi
 - Test failures reveal design issues (not just typos)
 - Multi-tenant or cross-cutting concerns involved
 - Branch corruption detected in Phase 3
+- CI status changed since Phase 1 (new failures or resolutions)
 
-**Output**: Structured issue list with severity, complexity, escalation flags.
+**Output**: Structured issue list with severity, complexity, escalation flags, CI status changes.
 
 ## Phase 5: User Interaction (MANDATORY)
 
 **CRITICAL**: Before executing ANY fixes, you MUST:
 
-1. **Consolidate all findings** from Phase 2 analysis (all PRs, all three issue sources)
-   - Aggregate CI failures, review comments, and code quality issues
+1. **Consolidate all findings** from Phase 2 analysis and Phase 4 CI re-check (all PRs, all sources)
+   - Aggregate CI failures (FRESH from Phase 4), review comments, and code quality issues
    - Remove duplicates across different sources
    - Enrich with severity (Critical/High/Medium/Low) and complexity
+   - Flag PRs where CI status changed since Phase 1 (Gap #16 fix)
 
 2. **Present comprehensive report** with severity breakdown:
    ```
@@ -251,7 +273,7 @@ fi
    - User may want to exclude certain PRs or issue types
    - User may want to adjust severity thresholds
 
-**Enhanced report format** (include metadata):
+**Enhanced report format** (include metadata and CI staleness warnings):
 ```
 === Warden Analysis Report ===
 
@@ -259,6 +281,8 @@ Analysis Metadata:
 - PRs analyzed: 14
 - Analysis time: ~12 minutes
 - Subagents launched: 42 (3 per PR × 14)
+- CI re-verified: ✅ (Gap #16 prevention)
+- CI status changes: 2 PRs (flagged below)
 - Anomalies detected: 1 (PR #3875 file count mismatch)
 
 Priority Distribution:
@@ -270,6 +294,12 @@ Priority Distribution:
 Issues Found:
 
 PR #123: Feature XYZ
+⚠️  CI Status Changed (Gap #16 detection):
+├─ Phase 1: 0 failures (passing)
+└─ Current:  2 failures (FRESH CHECK)
+    - TestAuthHandler: Expected 2 elements, got 0
+    - TestSessionCleanup: Race condition detected
+
 ├─ Critical (2): [Issue IDs with file:line]
 ├─ High (3): [Issue IDs with file:line]
 └─ Medium (1): [Issue IDs with file:line]

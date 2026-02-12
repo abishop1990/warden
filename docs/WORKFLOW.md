@@ -139,7 +139,45 @@ TEST_CMD=$(grep "Test:" CLAUDE.md | grep '`' | tr -d '`')
 
 ## Phase 3: Planning
 
-Aggregate findings, deduplicate, sort by severity (Critical → High → Medium → Low)
+**Step 1: CI Re-verification (MANDATORY - Gap #16 fix)**
+
+**⚠️ CRITICAL**: CI status can change between Phase 1 and Phase 4. MUST re-check before presenting report.
+
+```bash
+echo "=== Re-verifying CI Status (Gap #16 Prevention) ==="
+
+for PR_NUM in ${SELECTED_PRS[@]}; do
+  # Fetch fresh CI status
+  CURRENT_CI=$(gh pr checks ${PR_NUM} --json name,status,conclusion)
+
+  # Compare with Phase 1 status
+  INITIAL_CI_STATE=${PR_CI_STATE[$PR_NUM]}  # Saved from Phase 1
+  CURRENT_CI_STATE=$(echo "$CURRENT_CI" | jq -r 'map(select(.conclusion == "failure")) | length')
+
+  if [ "$INITIAL_CI_STATE" != "$CURRENT_CI_STATE" ]; then
+    echo "⚠️  PR #${PR_NUM}: CI status changed!"
+    echo "   Phase 1: ${INITIAL_CI_STATE} failures"
+    echo "   Current: ${CURRENT_CI_STATE} failures"
+
+    # Flag for reporting
+    CI_CHANGED[$PR_NUM]=true
+
+    # Re-fetch CI details if status changed
+    gh pr checks ${PR_NUM} > "/tmp/warden-pr-${PR_NUM}-ci-fresh.json"
+  fi
+done
+```
+
+**Why this matters**:
+- Flaky tests can start failing after Phase 1
+- Concurrent merges can break CI
+- Presenting stale CI data leads to wrong fix recommendations
+
+**Enforcement**: Phase 4 report MUST include fresh CI data and flag changed statuses.
+
+**Step 2: Aggregate Findings**
+
+Aggregate findings from Phase 2, deduplicate, sort by severity (Critical → High → Medium → Low)
 
 ## Phase 4: User Interaction
 
@@ -147,22 +185,29 @@ Present report combining all sources (CI + Review + Code + Ticket), ask what to 
 ```
 PR #123: Fix authentication
 
+⚠️  CI Status Changed (Gap #16 detection):
+├─ Phase 1: 0 failures (passing)
+└─ Current:  2 failures (FRESH CHECK)
+    - TestAuthHandler: Expected 2 elements, got 0
+    - TestSessionCleanup: Race condition detected
+
 Ticket Alignment (PROJ-456):
 ├─ ✅ Core auth implemented (matches ticket)
 ├─ ⚠️ Missing: Password reset link (acceptance criteria)
 └─ 🚨 Scope divergence: Analytics code (not in ticket)
 
 Critical (2):
-  [CI] SQL injection in login endpoint
+  [CI] TestAuthHandler failure (FRESH) - Expected 2 elements, got 0
   [Review] Missing auth check per @reviewer
 
 High (3):
-  [CI] Test failure: race condition in session handler
+  [CI] TestSessionCleanup (FRESH) - Race condition in session handler
   [Review] Unvalidated user input per @security-team
   [Code] Missing error handling in payment flow
 
 Recommendation:
 - Split PR: Core auth (matches PROJ-456) + Analytics (new ticket)
+- CI changed since Phase 1 - using FRESH data
 
 Fix: 1) All Critical+High  2) Critical only  3) Skip
 ```
