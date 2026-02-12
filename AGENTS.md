@@ -1,74 +1,75 @@
 # AI Coding Agent Instructions
 
-This file provides unified instructions for all AI coding assistants working with the Warden skills repository.
+This file provides unified instructions for all AI coding assistants working with the Warden PR review and fix skill.
 
-## Repository Purpose
+## About Warden
 
-Warden is an open-source collection of cross-platform AI coding assistant skills. These skills work across:
+Warden is a cross-platform AI coding assistant skill for comprehensive automated PR review and fixes. It works across:
 - Claude Code
 - GitHub Copilot
 - Cursor
 - Codex
 - Other AI coding assistants
 
-## Repository Structure
+## What This Skill Does
 
+Analyzes CI failures, review comments, and code quality, then helps fix identified issues through a structured 6-phase workflow:
+
+1. **Discovery** - List and select PRs to analyze
+2. **Analysis** - Parallel analysis using multiple specialized agents (CI, review comments, staff engineer review)
+3. **Planning** - Aggregate findings, deduplicate, and prioritize by severity
+4. **User Interaction** - Select which issues to fix
+5. **Execution** - Make fixes in temporary workspace, test, commit, and push
+6. **Summary Report** - Comprehensive outcome report
+
+## Key Features
+
+- **Multi-platform Support**: Works across all major AI coding assistants
+- **Parallel Analysis**: Uses specialized subagents for comprehensive review
+- **CI/CD Integration**: Detects and diagnoses failures
+- **Language-Agnostic**: Adapts to Go, Python, JavaScript/TypeScript, Rust, and more
+- **Safe Execution**: Temporary workspaces, automated testing, rollback options
+
+## Invocation
+
+### Claude Code
+Request PR review using natural language, referencing the pr-review-and-fix workflow.
+
+### GitHub Copilot
 ```
-warden/
-├── skills/              # Individual skill definitions
-│   └── [skill-name]/
-│       └── SKILL.md    # Skill definition with YAML frontmatter
-├── AGENTS.md           # This file - unified AI instructions
-├── CLAUDE.md           # Claude Code specific instructions
-├── .cursorrules        # Cursor specific rules
-└── .github/
-    └── copilot-instructions.md  # GitHub Copilot instructions
+@copilot /pr-review-and-fix
 ```
 
-## Skill Format
+### Cursor
+Request PR review in chat/composer using the pr-review-and-fix workflow.
 
-Each skill follows this structure:
+## Implementation Guidelines
 
-1. **YAML Frontmatter** - Metadata for AI agents to understand when to use the skill
-   - `name`: Unique skill identifier
-   - `description`: Clear description for skill matching
-   - `version`: Semantic version
-   - `platforms`: List of compatible AI assistants
-   - `tags`: Searchable tags
+When executing this skill:
 
-2. **Documentation Sections**
-   - Overview
-   - Usage (with platform-specific invocation)
-   - Workflow (detailed step-by-step process)
-   - Implementation Notes
-   - Language-Specific Adaptations (where applicable)
-   - Future Enhancements
+1. **Follow the 6-phase workflow** documented in README.md
+2. **Use parallel execution** where possible (Phase 2 analysis)
+3. **Prioritize by severity**: Critical > High > Medium > Low
+4. **Make minimal changes**: Surgical fixes only
+5. **Test before committing**: Always verify tests pass
+6. **Use temporary workspaces**: Never modify user's working directory
+7. **Handle errors gracefully**: Continue with other PRs if one fails
+8. **Provide clear summaries**: Report what was done and what needs manual attention
 
-## Contributing New Skills
+## Language-Specific Commands
 
-When creating a new skill:
+The skill adapts to the target repository's language:
 
-1. Create a new directory under `skills/[skill-name]/`
-2. Add a `SKILL.md` file with proper YAML frontmatter
-3. Document the workflow clearly with numbered phases
-4. Include platform-specific usage examples
-5. Add language-specific adaptations where relevant
-6. Consider error handling and edge cases
-
-## Available Skills
-
-### pr-review-and-fix
-Comprehensive automated PR review that analyzes CI failures, review comments, and code quality, then helps fix identified issues.
-
-**Triggers:** When user mentions PR review, PR fixes, CI failures, or code review automation.
-
-See [skills/pr-review-and-fix/SKILL.md](skills/pr-review-and-fix/SKILL.md) for full documentation.
+- **Go**: `gofmt -s -w .`, `go test -v <package>`, `golangci-lint run`
+- **Python**: `black .`, `pytest`, `ruff check`
+- **JavaScript/TypeScript**: `prettier --write .`, `npm test`, `eslint .`
+- **Rust**: `cargo fmt`, `cargo test`, `cargo clippy`
 
 ## General Guidelines
 
-- Skills should be modular and self-contained
-- Documentation should be clear enough for any AI agent to execute
-- Include error handling and graceful degradation
-- Support multiple programming languages where applicable
-- Provide dry-run or preview options when making changes
 - Always confirm destructive actions with the user
+- Provide dry-run or preview options when making changes
+- Use appropriate error handling and graceful degradation
+- Support multiple programming languages
+- Document all changes in commit messages
+- Follow repository-specific conventions and patterns

@@ -1,43 +1,54 @@
-# Cursor Rules for Warden Skills Repository
+# Cursor Rules for Warden
 
-## Repository Purpose
-Warden is an open-source collection of cross-platform AI coding assistant skills that work across Claude Code, GitHub Copilot, Cursor, and other AI assistants.
+## About Warden
 
-## Project Structure
-- `skills/` contains individual skill definitions
-- Each skill has a `SKILL.md` file with YAML frontmatter
-- `AGENTS.md` contains unified instructions for all AI assistants
-- Platform-specific configs: `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. It analyzes CI failures, review comments, and code quality, then helps fix identified issues.
 
-## When Working with Skills
+## Skill Workflow
 
-### Creating Skills
-1. Create `skills/[skill-name]/SKILL.md`
-2. Include YAML frontmatter with: name, description, version, platforms, tags
-3. Document workflow in clear phases
-4. Add platform-specific usage examples
-5. Include language-specific adaptations where relevant
+This skill implements a 6-phase workflow:
 
-### Skill Documentation Structure
-- Overview: Brief description of what the skill does
-- Usage: Platform-specific invocation examples
-- Workflow: Step-by-step phases with clear numbering
-- Implementation Notes: Technical details and best practices
-- Language-Specific Adaptations: Commands/tools for different languages
-- Future Enhancements: Ideas for iteration
+1. **Discovery** - List and select PRs to analyze
+2. **Parallel Analysis** - CI analysis, review comments, staff engineer review
+3. **Planning** - Aggregate findings, deduplicate, prioritize by severity
+4. **User Interaction** - Select which issues to fix
+5. **Execution** - Make fixes in temporary workspace, test, commit, push
+6. **Summary Report** - Comprehensive outcome report
+
+See [README.md](README.md) for complete documentation.
+
+## Invocation in Cursor
+
+Request PR review in chat or composer, referencing the pr-review-and-fix workflow.
+
+## Implementation Guidelines
+
+1. **Follow the 6-phase workflow** documented in README.md
+2. **Use parallel execution** where possible
+3. **Prioritize by severity**: Critical > High > Medium > Low
+4. **Make minimal changes**: Surgical fixes only
+5. **Test before committing**: Always verify tests pass
+6. **Use temporary workspaces**: Never modify user's working directory
+7. **Handle errors gracefully**: Continue with other PRs if one fails
+
+## Language-Specific Commands
+
+- **Go**: `gofmt -s -w .`, `go test -v <package>`, `golangci-lint run`
+- **Python**: `black .`, `pytest`, `ruff check`
+- **JavaScript/TypeScript**: `prettier --write .`, `npm test`, `eslint .`
+- **Rust**: `cargo fmt`, `cargo test`, `cargo clippy`
 
 ## General Guidelines
-- Keep skills modular and self-contained
-- Support multiple programming languages
-- Include error handling
-- Document destructive operations clearly
-- Provide dry-run options where applicable
-- Always confirm before making changes to repositories
 
-## Available Skills
-See `AGENTS.md` for the current catalog of skills and their triggers.
+- Support multiple programming languages
+- Include error handling and rollback options
+- Document all changes in commit messages
+- Always confirm destructive actions with users
+- Provide dry-run options where applicable
+- Clean up temporary workspaces
 
 ## Cursor-Specific Notes
-- Use Cursor's multi-file editing for complex skill implementations
-- Leverage codebase-wide context for understanding existing patterns
-- Test skill workflows in Cursor's composer mode
+
+- Leverage Cursor's multi-file editing for complex fixes
+- Use codebase-wide context for understanding existing patterns
+- Test workflows in Cursor's composer mode

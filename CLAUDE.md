@@ -1,62 +1,78 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with the Warden PR review and fix skill.
 
-## Project Overview
+## About Warden
 
-Warden is an open-source collection of cross-platform AI coding assistant skills. Skills are reusable, well-documented workflows that work across Claude Code, GitHub Copilot, Cursor, and other AI assistants.
+Warden is a cross-platform AI skill for comprehensive automated PR review and fixes. It analyzes CI failures, review comments, and code quality, then helps fix identified issues.
 
-## Repository Structure
+## Skill Overview
 
-- `skills/` - Individual skill definitions, each in its own directory with a `SKILL.md` file
-- `AGENTS.md` - Unified instructions for all AI coding assistants (read this for general guidelines)
-- Platform-specific config files: `CLAUDE.md` (this file), `.cursorrules`, `.github/copilot-instructions.md`
+This skill implements a 6-phase workflow for PR review and automated fixes:
 
-## Working with Skills
+1. **Discovery** - List and select PRs to analyze
+2. **Parallel Analysis** - Launch specialized subagents for CI, review comments, and staff engineer review
+3. **Planning** - Aggregate findings, deduplicate, prioritize by severity
+4. **User Interaction** - Select which issues to fix
+5. **Execution** - Make fixes in temporary workspace, test, commit, push
+6. **Summary Report** - Comprehensive outcome report
 
-### Creating New Skills
+See [README.md](README.md) for complete workflow documentation.
 
-1. Create directory: `skills/[skill-name]/`
-2. Add `SKILL.md` with YAML frontmatter:
-   ```yaml
-   ---
-   name: skill-name
-   description: Clear description for AI matching
-   version: 1.0.0
-   platforms: [claude-code, github-copilot, cursor, codex]
-   tags: [relevant, tags]
-   ---
-   ```
-3. Document the workflow with clear phases
-4. Include Claude Code specific subagent usage where applicable
-5. Add language-specific adaptations
+## Claude Code Specific Implementation
 
-### Claude Code Specific Features
+### Subagent Usage
 
-When documenting skills for Claude Code:
-- Use the Task tool to launch specialized subagents (explore, task, general-purpose)
-- Reference the full conversation context for complex workflows
-- Leverage parallel tool execution for independent operations
-- Use proper git workflow (avoid destructive operations without confirmation)
+When executing this skill in Claude Code, use the Task tool to launch specialized subagents:
 
-### Testing Skills
+**Phase 2: Analysis (Parallel)**
+- **task agent** - CI log analysis, test running
+- **explore agent** - Code searching, review comment analysis
+- **general-purpose agent** - Complex multi-file fixes
 
-To test a skill implementation:
-1. Read the SKILL.md file to understand the workflow
-2. Follow the documented phases step-by-step
-3. Use appropriate subagents for complex tasks
-4. Verify error handling and edge cases
-5. Test across different programming languages if applicable
+Launch these subagents in parallel for maximum efficiency.
 
-## Available Skills
+### Workflow Execution
 
-See `AGENTS.md` for the current list of available skills and their descriptions.
+1. **Read the full workflow** from README.md before starting
+2. **Use parallel tool calls** where operations are independent
+3. **Create temporary workspace** for all PR modifications
+4. **Never modify user's working directory** directly
+5. **Test before committing** - only commit if tests pass
+6. **Use appropriate subagents** based on task complexity
 
-## Contributing
+### Testing and Validation
 
-This is an open-source project. When adding or modifying skills:
-- Maintain cross-platform compatibility
-- Update AGENTS.md with new skill entries
-- Test the skill workflow before committing
-- Follow the documented skill format
-- Keep documentation clear and actionable
+For each PR fix:
+- Identify affected packages from changed files
+- Run language-specific tests (e.g., `go test -v <package>` for Go)
+- Run formatting tools (e.g., `gofmt -s -w .` for Go)
+- Verify no unintended changes: `git diff`
+- Only commit if all tests pass
+
+### Error Handling
+
+- Gracefully degrade if CI logs unavailable
+- Provide rollback options for failed fixes
+- Flag complex issues for manual review
+- Continue with other PRs if one fails
+- Always clean up temporary workspaces
+
+## Git Workflow
+
+When making fixes:
+- Create temporary workspace: `/tmp/pr-review-{pr-number}-{timestamp}`
+- Clone repo and checkout PR branch
+- Make minimal, surgical changes
+- Test thoroughly
+- Commit with format: `[PR #{number}] Fix: {description}`
+- Push to PR branch
+- Clean up temporary workspace
+
+## Language-Specific Adaptations
+
+The skill automatically adapts based on the repository language. See README.md for complete language-specific commands for Go, Python, JavaScript/TypeScript, and Rust.
+
+## Available Information
+
+All skill documentation is in [README.md](README.md). Platform-agnostic guidance is in [AGENTS.md](AGENTS.md).

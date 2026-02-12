@@ -1,109 +1,211 @@
-# Warden
+# Warden - PR Review and Fix
 
-An open-source collection of cross-platform AI coding assistant skills.
+Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 ## Overview
 
-Warden provides reusable, well-documented workflows (skills) that work across multiple AI coding assistants:
+Warden is an AI coding assistant skill that analyzes CI failures, review comments, and code quality, then helps fix identified issues. It works across multiple AI platforms:
 
 - **Claude Code** - Anthropic's AI pair programmer
 - **GitHub Copilot** - GitHub's AI assistant
 - **Cursor** - AI-first code editor
 - **Codex** - And other AI coding tools
 
-Each skill is platform-agnostic with specific invocation examples for each tool.
+## Features
 
-## Repository Structure
-
-```
-warden/
-├── skills/              # Individual skill definitions
-│   └── [skill-name]/
-│       └── SKILL.md    # Skill documentation with YAML frontmatter
-├── AGENTS.md           # Unified instructions for all AI assistants
-├── CLAUDE.md           # Claude Code specific instructions
-├── .cursorrules        # Cursor specific rules
-└── .github/
-    └── copilot-instructions.md  # GitHub Copilot instructions
-```
-
-## Available Skills
-
-### pr-review-and-fix
-
-Comprehensive automated PR review that analyzes CI failures, review comments, and code quality, then helps fix identified issues.
-
-**Features:**
-- Parallel analysis using multiple specialized agents
-- CI/CD failure detection and diagnosis
-- Review comment analysis
-- Staff engineer-level code review
-- Automated fix suggestions with testing
-- Multi-language support (Go, Python, JavaScript/TypeScript, Rust)
-
-**Usage:**
-- **Claude Code**: Request PR review using natural language
-- **GitHub Copilot**: `@copilot /pr-review-and-fix`
-- **Cursor**: Request PR review in chat/composer
-
-[View full documentation →](skills/pr-review-and-fix/SKILL.md)
+- **Parallel Analysis**: Uses multiple specialized agents for comprehensive review
+- **CI/CD Integration**: Detects and diagnoses test failures, build errors, and lint issues
+- **Review Comment Analysis**: Identifies unresolved feedback requiring action
+- **Staff Engineer-Level Review**: Deep code quality analysis for logic errors, security, performance, and best practices
+- **Automated Fixes**: Makes minimal, surgical changes with testing and verification
+- **Multi-Language Support**: Adapts to Go, Python, JavaScript/TypeScript, Rust, and more
 
 ## Usage
 
-### For AI Assistants
+### Claude Code
+```
+Review and fix PRs using the pr-review-and-fix workflow
+```
 
-The AI assistant you're using will automatically read the appropriate configuration file:
+### GitHub Copilot
+```
+@copilot /pr-review-and-fix
+```
+
+### Cursor
+```
+Review and fix PRs using the pr-review-and-fix workflow
+```
+
+### Optional Parameters
+- `--author <username>` - Review PRs by specific author (defaults to current user)
+- `--repo <owner/repo>` - Target specific repository (defaults to current)
+- `--state open|all` - PR state to review (defaults to open)
+- `--limit <n>` - Max number of PRs to review (defaults to 10)
+
+## Workflow
+
+### Phase 1: Discovery
+1. List all PRs matching criteria (author, repo, state)
+2. Display summary table with PR number, title, CI status, review status
+3. Ask user which PRs to analyze (or "all")
+
+### Phase 2: Analysis (Parallel)
+For each selected PR, launch parallel analysis using subagents:
+
+**Subagent A: CI Analysis** (task agent)
+- Check CI/CD status for the PR
+- If failed, fetch logs and identify failure reasons
+- Categorize failures: test failures, lint errors, build errors, etc.
+- Extract specific error messages and file locations
+
+**Subagent B: Review Comments Analysis** (explore agent)
+- Fetch all review comments (including resolved)
+- Identify unresolved comments requiring action
+- Categorize comments: bugs, style, performance, security, etc.
+- Extract specific code locations mentioned
+
+**Subagent C: Staff Engineer Review** (code-review agent)
+- Perform deep code review looking for:
+  - Logic errors and edge cases
+  - Performance issues
+  - Security vulnerabilities
+  - Design patterns and best practices
+  - Code maintainability
+  - Missing tests
+  - Documentation gaps
+- Focus on high-signal issues only (not style/formatting)
+
+### Phase 3: Planning
+1. Aggregate all findings from subagents
+2. Deduplicate issues across sources
+3. Prioritize by severity: Critical > High > Medium > Low
+4. Group related issues that can be fixed together
+5. Present structured recommendation list per PR with severity indicators
+
+### Phase 4: User Interaction
+For each PR, ask user what to fix:
+- All Critical + High
+- All Critical only
+- Select specific issues
+- Skip this PR
+
+### Phase 5: Execution
+For each PR with selected fixes:
+
+1. **Setup**
+   - Create temporary workspace: `/tmp/pr-review-{pr-number}-{timestamp}`
+   - Clone repository and checkout PR branch
+
+2. **Fix Issues** (in order: Critical → High → Medium → Low)
+   - Use appropriate subagent based on complexity
+   - Make minimal, surgical changes
+   - Run language-specific formatting
+   - Run relevant unit tests
+   - Only commit if tests pass
+
+3. **Commit Strategy**
+   - One commit per logical fix or group
+   - Format: `[PR #{number}] Fix: {description}`
+   - Include context: what was fixed, why, what was tested
+
+4. **Push and Verify**
+   - Push commits to PR branch
+   - Monitor CI status briefly
+   - Report outcome
+
+5. **Cleanup**
+   - Remove temporary workspace
+
+### Phase 6: Summary Report
+Provide comprehensive summary:
+- How many PRs analyzed/fixed/skipped
+- Issues fixed by category
+- CI status updates
+- Next steps and items needing manual attention
+
+## Implementation Notes
+
+### Temporary Workspace Management
+```bash
+WORKSPACE="/tmp/pr-review-${PR_NUMBER}-$(date +%s)"
+mkdir -p "$WORKSPACE"
+cd "$WORKSPACE"
+gh repo clone owner/repo .
+git fetch origin pull/${PR_NUMBER}/head:pr-${PR_NUMBER}
+git checkout pr-${PR_NUMBER}
+# Work...
+cd / && rm -rf "$WORKSPACE"
+```
+
+### Subagent Usage (Claude Code Specific)
+
+**task agent** - Test running, CI log analysis
+**explore agent** - Code searching, review comment analysis
+**code-review agent** - Deep code quality review (report only)
+**general-purpose agent** - Complex multi-file fixes
+
+### Testing Strategy
+1. Identify affected packages from changed files
+2. Run language-specific tests
+3. Run formatting tools
+4. Verify no unintended changes: `git diff`
+5. Only commit if all tests pass
+
+### Error Handling
+- Graceful degradation if CI logs unavailable
+- Rollback options for failed fixes
+- Flag complex issues for manual review
+- Continue with other PRs if one fails
+
+## Language-Specific Adaptations
+
+### Go Projects
+- Formatting: `gofmt -s -w .`
+- Testing: `go test -v <package>`
+- Linting: `golangci-lint run`
+
+### Python Projects
+- Formatting: `black .` or `ruff format`
+- Testing: `pytest <path>` or `python -m pytest`
+- Linting: `ruff check` or `pylint`
+
+### JavaScript/TypeScript Projects
+- Formatting: `prettier --write .`
+- Testing: `npm test` or `yarn test`
+- Linting: `eslint .`
+
+### Rust Projects
+- Formatting: `cargo fmt`
+- Testing: `cargo test`
+- Linting: `cargo clippy`
+
+## Platform Configuration
+
+Warden automatically works with your AI assistant through platform-specific configuration files:
 - Claude Code reads `CLAUDE.md` and `AGENTS.md`
 - Cursor reads `.cursorrules` and `AGENTS.md`
 - GitHub Copilot reads `.github/copilot-instructions.md`
 
-### For Developers
-
-1. **Browse available skills** in the `skills/` directory
-2. **Read skill documentation** to understand the workflow
-3. **Invoke skills** using your AI assistant's preferred method
-4. **Contribute new skills** following the format in `AGENTS.md`
-
-## Skill Format
-
-Each skill includes:
-
-```yaml
----
-name: skill-name
-description: Clear description for AI matching
-version: 1.0.0
-platforms: [claude-code, github-copilot, cursor, codex]
-tags: [relevant, tags]
----
-```
-
-Followed by:
-- **Overview**: What the skill does
-- **Usage**: Platform-specific invocation
-- **Workflow**: Step-by-step phases
-- **Implementation Notes**: Technical details
-- **Language-Specific Adaptations**: Commands for different languages
-- **Future Enhancements**: Planned improvements
+## Future Enhancements
+- Multiple repository support in single run
+- Integration with project management tools (Aha, Jira, Linear)
+- Learning from fix acceptance rates
+- Customizable review rules per repo
+- Dry-run mode
+- Auto-comment on PRs with summary
+- Historical pattern analysis
+- Code owner integration
+- Notification integrations (Slack, email, Discord)
 
 ## Contributing
 
-We welcome contributions! To add a new skill:
-
-1. Create `skills/[your-skill-name]/SKILL.md`
-2. Follow the YAML frontmatter format
-3. Document the workflow clearly
-4. Include platform-specific usage
-5. Add language adaptations where relevant
-6. Update `AGENTS.md` with the new skill
-7. Submit a pull request
-
-See [AGENTS.md](AGENTS.md) for detailed contribution guidelines.
+Contributions welcome! This is an open-source skill designed to work across all AI coding assistants.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Acknowledgments
+## Version
 
-Inspired by the growing ecosystem of AI coding assistants and the need for reusable, cross-platform workflows.
+**1.0.0** - Initial release
