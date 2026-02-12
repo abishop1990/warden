@@ -393,3 +393,33 @@ See README.md for complete language-specific command reference.
 - Configuration system: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 - GitHub Copilot instructions: [.github/copilot-instructions.md](.github/copilot-instructions.md)
 - Cursor rules: [.cursorrules](.cursorrules)
+
+## Development & Maintenance
+
+When making significant changes to Warden (new features, workflow changes, enforcement mechanisms):
+
+**Update README.md**:
+- Keep it high-level and user-facing
+- Update "How it works" workflow steps if phases change
+- Update "Features" list for new capabilities
+- Update "How Warden Ensures Quality" for validation changes
+- Add new documentation references to appropriate sections
+- **Avoid bloat**: Don't duplicate detailed parameter/configuration info (belongs in PARAMETERS.md, CONFIGURATION.md, EXAMPLES.md)
+
+**Check for context bloat**:
+- Detailed configuration examples → Move to EXAMPLES.md or PARAMETERS.md
+- Technical implementation details → Move to platform-specific docs (CLAUDE.md, AGENTS.md)
+- Verbose explanations → Keep README concise, link to detailed docs
+
+**README should contain**:
+- Overview (what, why, how)
+- Quick installation
+- Basic usage patterns
+- Key features summary
+- Links to detailed documentation
+
+**README should NOT contain**:
+- Exhaustive parameter lists (→ PARAMETERS.md)
+- Detailed configuration examples (→ EXAMPLES.md)
+- Technical implementation details (→ AGENTS.md, WORKFLOW.md)
+- Platform-specific instructions (→ CLAUDE.md, .cursorrules, etc.)

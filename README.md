@@ -161,60 +161,27 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETER
 - **[COMMANDS.md](docs/COMMANDS.md)** - Command discovery and execution
 - **[VALIDATION-ORDER.md](docs/VALIDATION-ORDER.md)** - Validation sequence requirements
 
-## Configuration Options
+## Configuration
 
-Warden is highly configurable. You can request options using natural language:
+Warden is highly configurable through natural language or parameters:
 
-### Review Depth
-- **Standard**: Single generalist reviewer (fastest)
-- **Thorough**: Security + performance reviewers
-- **Comprehensive**: Security + performance + architecture reviewers
-- **Custom**: Pick specific reviewers (security, performance, architecture, maintainability, testing)
+**Key configuration areas**:
+- **Review depth**: Standard (1 reviewer), Thorough (2), Comprehensive (3+), or custom reviewers
+- **Test strategy**: None, Affected (default), Full, or Smart
+- **Fix approach**: Conservative, Balanced (default), or Aggressive
+- **Workspace**: Isolated temp dirs (default), custom location, or in-place
 
-**Examples:**
+**Example requests**:
 ```
 "Run Warden with security and performance reviewers"
-"Use comprehensive review with all specialists"
-```
-
-### Testing Approach
-- **None**: Skip tests (for documentation-only changes)
-- **Affected**: Test only changed packages (default, fastest)
-- **Full**: Run complete test suite
-- **Smart**: Analyze dependencies and test affected areas
-
-**Examples:**
-```
-"Run Warden and skip tests"
-"Use full test suite for this review"
-```
-
-### Fix Behavior
-- **Conservative**: Only high-confidence fixes (safest)
-- **Balanced**: Mix of high and medium confidence (default)
-- **Aggressive**: Include lower-confidence fixes (most thorough)
-
-**Examples:**
-```
-"Use conservative fixes only"
-"Be aggressive with fixes for this security issue"
-```
-
-### Safety Options
-- Preview changes before pushing
-- Protect specific branches from modifications
-- Limit maximum files changed
-- Create rollback branches
-- Check for merge conflicts before starting
-
-**Examples:**
-```
-"Require review before pushing changes"
+"Use full test suite and conservative fixes"
 "Create a rollback branch for safety"
-"Protect the main branch"
 ```
 
-**Full parameter reference**: See [PARAMETERS.md](docs/PARAMETERS.md) for technical details on all options.
+**Detailed documentation**:
+- [CONFIGURATION.md](docs/CONFIGURATION.md) - Config files, workspace modes, setup
+- [PARAMETERS.md](docs/PARAMETERS.md) - Complete parameter reference (25 core + 19 advanced)
+- [EXAMPLES.md](docs/EXAMPLES.md) - Real-world usage examples
 
 ## How Warden Ensures Quality
 
