@@ -291,8 +291,6 @@ Fixed ${ISSUE_COUNT} ${SEVERITY} severity issues:
 - [${ISSUE_ID}] ${ISSUE_SUMMARY} (${FILE}:${LINE})
 
 Tested: ${AFFECTED_PACKAGES}
-
-Co-Authored-By: Warden <noreply@warden.dev>
 ```
 
 **Test and push**:
