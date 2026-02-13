@@ -25,8 +25,8 @@ PR state to review.
 
 #### `--limit <n>`
 Maximum number of PRs to review.
-- **Default**: `10`
-- **Example**: `--limit 50`
+- **Default**: Unlimited (all PRs)
+- **Example**: `--limit 5` (only review 5 PRs)
 
 ---
 

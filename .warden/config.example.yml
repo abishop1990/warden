@@ -33,7 +33,7 @@ defaults:
   # ---------------------------------------------------------------------------
   author: "@me"                      # Review PRs by this author
   state: open                        # open, closed, or all
-  limit: 10                          # Max PRs to review (auto-select top by priority)
+  limit: null                        # Max PRs to review (null = all, or set number)
 
   # ---------------------------------------------------------------------------
   # Review Configuration
