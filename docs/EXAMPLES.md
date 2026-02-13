@@ -622,7 +622,7 @@ warden \
 
 ## See Also
 
-- [QUICKSTART.md](../QUICKSTART.md) - 5-minute quick start
+- [QUICKSTART.md](QUICKSTART.md) - 5-minute quick start
 - [PARAMETERS.md](PARAMETERS.md) - Complete parameter reference
 - [WORKFLOW.md](WORKFLOW.md) - Detailed workflow explanation
 - [SAFETY.md](SAFETY.md) - Safety features and best practices

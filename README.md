@@ -58,7 +58,7 @@ cd ~/warden
 
 Then say `"Run the Warden skill"` to your AI assistant.
 
-**Full installation guide**: See [INSTALL.md](INSTALL.md) for:
+**Full installation guide**: See [docs/INSTALL.md](docs/INSTALL.md) for:
 - Platform-specific setup (Claude Code, Copilot, Cursor, Codex)
 - Adding Warden to your workspace
 - Custom installation paths
@@ -67,7 +67,7 @@ Then say `"Run the Warden skill"` to your AI assistant.
 
 ## Quick Start
 
-**5-minute introduction**: See [QUICKSTART.md](QUICKSTART.md)
+**5-minute introduction**: See [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
 ### How to Use
 
@@ -145,8 +145,8 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for workspace setup and [PARAMETER
 
 ### For Users
 
-- **[INSTALL.md](INSTALL.md)** - Installation guide for all platforms
-- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+- **[docs/INSTALL.md](docs/INSTALL.md)** - Installation guide for all platforms
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Get started in 5 minutes
 - **[CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration system (config files, workspace modes, setup)
 - **[TICKET-INTEGRATION.md](docs/TICKET-INTEGRATION.md)** - JIRA/Aha/Linear integration for ticket alignment analysis
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Real-world usage examples for every scenario
@@ -236,6 +236,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Get started**: [QUICKSTART.md](QUICKSTART.md)
+**Get started**: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
 **Questions?** Check [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) or open an [issue](https://github.com/abishop1990/warden/issues).
