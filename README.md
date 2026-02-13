@@ -25,6 +25,7 @@ Works across multiple AI platforms:
 - **Claude Code** - Anthropic's AI pair programmer
 - **GitHub Copilot** - GitHub's AI assistant
 - **Cursor** - AI-first code editor
+- **Codex** - OpenAI's code model
 - And other AI coding assistants
 
 ## Features
