@@ -192,8 +192,14 @@ Claude Code provides these specialized agents via the Task tool:
 **Phase 1: PR Discovery**
 - **Agent**: Main agent
 - **Task**: Single batch API call with `gh pr list --json` to get **PULL REQUESTS** (not branches!)
-- **Command**: `gh pr list --state open --json number,headRefName,title,statusCheckRollup,reviews,updatedAt`
+- **Command**:
+  ```bash
+  # Explicit user filtering - only analyze PRs by current user
+  GITHUB_USER=$(gh api user --jq '.login')
+  gh pr list --author "$GITHUB_USER" --state open --json number,headRefName,title,statusCheckRollup,reviews,updatedAt
+  ```
 - **Why**: Simple operation, no subagent needed
+- **User filtering**: MUST use `--author "$GITHUB_USER"` to only analyze current user's PRs
 - **Common mistake**: Using `git branch --list` - this lists branches, not PRs!
 
 **Scope Selection:**
@@ -238,18 +244,34 @@ gh pr diff 123
   1. **PR Metadata**: `gh pr view --json title,body,author` - understand PR intent
   2. **Repo AI Instructions**: Read `CLAUDE.md`, `AGENTS.md` - project conventions
   3. **Codebase Context**: Read README.md, package.json/go.mod, project structure
-- **Task**: For each PR, launch parallel agents:
-  1. CI Analysis: `gh pr checks` + log parsing
-  2. Review Analysis (**MUST fetch BOTH** - Gap #15 fix):
-     - Review summaries: `gh pr view --json reviews`
-     - Review comment threads: `gh api /repos/{owner}/{repo}/pulls/{pr}/comments`
-     - Parse BOTH for actionable items (see docs/REVIEW-COMMENTS.md)
-  3. Code Quality: `gh pr diff` + contextual analysis (with PR description, repo instructions, codebase overview)
-  4. (Thorough) Security Review: Deep security focus
-  5. (Thorough) Performance Review: Deep performance focus
-  6. (Comprehensive) Architecture Review: Deep design focus
-  7. (If ticket integration enabled) Ticket Alignment: Extract ticket ID, fetch requirements, compare to PR scope
-- **Why**: Complex multi-step analysis requiring autonomy and context
+
+**⭐ PRIORITY ENFORCEMENT** - Launch agents in this priority order:
+
+### Priority 1: Human Review Comments (PRIMARY SOURCE ⭐)
+  - **Why first**: Human reviewers already identified real issues
+  - Review Analysis (**MUST fetch BOTH** - Gap #15 fix):
+    - Review summaries: `gh pr view --json reviews`
+    - Review comment threads: `gh api /repos/{owner}/{repo}/pulls/{pr}/comments`
+    - **Bot filtering**: MUST exclude bot comments (copilot-pull-request-reviewer, blacksmith-sh, dependabot, github-actions[bot])
+    - **Response status**: Detect unresolved (⚠️) vs responded (💬) vs resolved (✅)
+    - Parse BOTH for actionable items (see docs/REVIEW-COMMENTS.md)
+
+### Priority 2: CI Failures (SECONDARY SOURCE)
+  - **Why second**: CI caught issues in automated testing
+  - CI Analysis: `gh pr checks` + log parsing
+  - More reliable than static analysis
+
+### Priority 3: Code Quality (TERTIARY SOURCE)
+  - **Why third**: Potential improvements, not blocking issues
+  - Code Quality: `gh pr diff` + contextual analysis (with PR description, repo instructions, codebase overview)
+  - (Thorough) Security Review: Deep security focus
+  - (Thorough) Performance Review: Deep performance focus
+  - (Comprehensive) Architecture Review: Deep design focus
+
+### Priority 4: Ticket Alignment (Optional)
+  - (If ticket integration enabled) Ticket Alignment: Extract ticket ID, fetch requirements, compare to PR scope
+
+- **Why this order**: Human reviewers > Automated CI > Static analysis
 - **Batching Strategy**: Max 5 PRs per batch to prevent overload (see AGENTS.md for details).
 
 **Parallelization per batch**:
