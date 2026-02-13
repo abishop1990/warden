@@ -175,15 +175,63 @@ done
 
 **Enforcement**: Phase 4 report MUST include fresh CI data and flag changed statuses.
 
+**Step 1.5: Merge Conflict Detection (NEW)**
+
+**Detect merge conflicts** when checking out PR branches:
+
+```bash
+for PR_NUM in ${SELECTED_PRS[@]}; do
+  # Checkout PR branch in temp workspace
+  cd "/tmp/warden-pr-${PR_NUM}"
+  gh pr checkout ${PR_NUM}
+
+  # Detect conflicts
+  CONFLICTS=$(git diff --name-only --diff-filter=U)
+
+  if [ -n "$CONFLICTS" ]; then
+    echo "⚠️  Merge conflicts detected in PR #${PR_NUM}"
+
+    # Save conflict details for Phase 4
+    echo "$CONFLICTS" > "/tmp/warden-pr-${PR_NUM}-conflicts.txt"
+
+    # Extract conflict content
+    for file in $CONFLICTS; do
+      git diff "$file" >> "/tmp/warden-pr-${PR_NUM}-conflict-details.txt"
+    done
+
+    # Flag for reporting
+    HAS_CONFLICTS[$PR_NUM]=true
+  fi
+done
+```
+
+**Why this matters**:
+- Conflicts block merging - must be addressed
+- Presents resolution options to user (auto, interactive, skip)
+- Avoids wasting time on PRs that can't merge
+
+See [MERGE-CONFLICT-HANDLING.md](MERGE-CONFLICT-HANDLING.md) for complete details.
+
 **Step 2: Aggregate Findings**
 
 Aggregate findings from Phase 2, deduplicate, sort by severity (Critical → High → Medium → Low)
 
 ## Phase 4: User Interaction
 
-Present report combining all sources (CI + Review + Code + Ticket), ask what to fix:
+Present report combining all sources (CI + Review + Code + Ticket + Conflicts), ask what to fix:
 ```
 PR #123: Fix authentication
+
+⚠️  MERGE CONFLICTS (2 files):
+├─ src/auth/login.ts (lines 45-52)
+│  - Conflict: OAuth2 vs JWT implementation
+└─ package.json (lines 15-18)
+   - Conflict: express@4.18.2 vs express@4.19.0
+
+Conflict resolution options:
+1. Auto-resolve: AI attempts resolution
+2. Interactive: Guide me through each conflict
+3. Skip: I'll handle manually (continue with other fixes)
 
 ⚠️  CI Status Changed (Gap #16 detection):
 ├─ Phase 1: 0 failures (passing)
@@ -206,10 +254,12 @@ High (3):
   [Code] Missing error handling in payment flow
 
 Recommendation:
+- Resolve conflicts first (blocks merge)
 - Split PR: Core auth (matches PROJ-456) + Analytics (new ticket)
 - CI changed since Phase 1 - using FRESH data
 
 Fix: 1) All Critical+High  2) Critical only  3) Skip
+Conflicts: 1) Auto-resolve  2) Interactive  3) Skip
 ```
 
 ## Phase 5: Execution
