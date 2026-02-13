@@ -686,7 +686,7 @@ gh auth login
 
 ### Check Documentation
 
-- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
+- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
 - [PARAMETERS.md](PARAMETERS.md) - All configuration options
 - [WORKFLOW.md](WORKFLOW.md) - How Warden works
 - [VALIDATION-ORDER.md](VALIDATION-ORDER.md) - Critical validation sequence

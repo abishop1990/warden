@@ -7,12 +7,12 @@ This guide shows you how to install and use the Warden skill across different AI
 **Option 1: One-line installer (Recommended)**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abishop1990/warden/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/abishop1990/warden/main/scripts/install.sh | bash
 ```
 
 Or install to a custom location:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abishop1990/warden/main/install.sh | bash -s /path/to/install
+curl -fsSL https://raw.githubusercontent.com/abishop1990/warden/main/scripts/install.sh | bash -s /path/to/install
 ```
 
 **Option 2: Manual clone**
@@ -172,12 +172,12 @@ Warden includes a `skill.json` manifest for future skill registry integration. T
 **Option 1: Uninstall script**
 
 ```bash
-bash ~/warden/uninstall.sh
+bash ~/warden/scripts/uninstall.sh
 ```
 
 Or if installed to custom location:
 ```bash
-bash /path/to/warden/uninstall.sh /path/to/warden
+bash /path/to/warden/scripts/uninstall.sh /path/to/warden
 ```
 
 **Option 2: Manual removal**
@@ -210,7 +210,7 @@ See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more help.
 
 After installation:
 1. Read [QUICKSTART.md](QUICKSTART.md) for basic usage
-2. Review [PARAMETERS.md](docs/PARAMETERS.md) for configuration options
+2. Review [PARAMETERS.md](PARAMETERS.md) for configuration options
 3. Try a dry-run: `"Run Warden in dry-run mode"`
 
 ## Contributing
