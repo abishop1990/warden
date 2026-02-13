@@ -2,6 +2,32 @@
 
 **TL;DR**: Discover validation commands (MANDATORY) → Analyze existing PRs → Identify issues → Fix by tier → Validate → Push → Cleanup
 
+## Why Warden Exists
+
+**The Problem**: Local AI agents (Claude Code, Copilot, Cursor) often miss issues that CI catches, leading to failed PRs and review churn.
+
+**Real Example**: PR #3797 in aha-smt repo
+- **What happened**: Claude Code wrote code locally, tests passed locally, pushed to PR
+- **Result**: CI immediately failed - tests that passed locally failed in CI
+- **Root cause**: Agent skipped the validation protocol and didn't check review comments
+
+**Why this happens**:
+1. **No filtering**: Agents analyze all PRs, not just the user's
+2. **Wrong priorities**: Agents treat code quality equally with human reviews and CI failures
+3. **Skip review comments**: Agents ignore detailed feedback in PR review threads
+4. **Skip validation**: Agents push without running build → lint → format → tests
+5. **No approval gate**: Agents proceed without user confirmation
+
+**Warden's Solution**:
+- ✅ **User filtering**: Only analyze PRs created by current user (Phase 1)
+- ✅ **Priority enforcement**: Human reviews (PRIMARY) > CI failures (SECONDARY) > Code quality (TERTIARY) (Phase 2)
+- ✅ **Review comment fetching**: Fetch BOTH review summaries AND comment threads (Phase 2)
+- ✅ **Bot filtering**: Ignore automated bot comments (Phase 2)
+- ✅ **Validation protocol**: Build → Lint → Format → Tests (100% pass required) before ANY push (Phase 5)
+- ✅ **User approval**: Present report, wait for confirmation (Phase 4)
+
+**Result**: Every PR is review-ready, reducing review churn and catching issues before human review.
+
 ## Phase 0: Command Discovery (MANDATORY)
 
 **⚠️ CRITICAL**: This phase MUST complete before Phase 1. Phase 5 is BLOCKED without this.
@@ -52,38 +78,87 @@ See [PHASE-0-DISCOVERY.md](PHASE-0-DISCOVERY.md) for complete specification.
 
 ## Phase 1: PR Discovery
 
-**Batch fetch existing open PRs:**
+**Explicit user filtering** (prevents analyzing other users' PRs):
 ```bash
-gh pr list --author @me --state open --json number,title,statusCheckRollup,reviews,updatedAt
+# Get current GitHub user
+GITHUB_USER=$(gh api user --jq '.login')
+
+# Fetch ONLY user's PRs (--author ensures we only see PRs created by current user)
+gh pr list --author "$GITHUB_USER" --state open --json number,title,statusCheckRollup,reviews,updatedAt
 ```
 
-**Scope Selection (Default: ALL PRs):**
-- **Default**: Analyze all open PRs for the user
-- No arbitrary limits - processes all PRs by default
+**Why explicit filtering**:
+- Prevents analyzing team members' PRs
+- Focuses on work user owns
+- Reduces noise and analysis time
+- Matches expected behavior: "review MY PRs"
 
-**User can specify subset:**
-- "Only analyze PR #123" → Single specific PR
-- "Analyze PRs #123, #125, #127" → Multiple specific PRs
-- "Analyze last 5 PRs" → Most recent N PRs
-- "Only PRs with failing CI" → Filter by condition
+**Recent activity filter** (optional):
+```bash
+# Only PRs updated in last 2 days (reduces stale PR noise)
+CUTOFF_DATE=$(date -u -d '2 days ago' '+%Y-%m-%dT%H:%M:%SZ')
+gh pr list --author "$GITHUB_USER" --state open --json number,title,statusCheckRollup,reviews,updatedAt \
+  | jq --arg cutoff "$CUTOFF_DATE" '[.[] | select(.updatedAt >= $cutoff)]'
+```
 
-**Processing Order (Priority):**
+**Scope Selection:**
+- If ≤10 PRs: Analyze all
+- If >10 PRs: Select top 10 by priority and INFORM user:
+  ```
+  Found 14 open PRs by @yourname. Analyzing top 10 by priority:
+  - 3 with failing CI
+  - 4 with review comments
+  - 3 most recent
+
+  Say "analyze all 14" to override, or "analyze PR #123, #125" for specific PRs.
+  ```
+
+**Priority Order:**
 1. Failing CI (statusCheckRollup = FAILURE)
 2. Has unresolved review comments
 3. Most recently updated
 
-PRs are processed in priority order, but ALL are included unless user specifies otherwise.
+**User can override with natural language:**
+- "Analyze all my PRs" → Removes limit
+- "Only analyze PR #123" → Specific PR
+- "Analyze PRs #123, #125, #127" → Multiple specific PRs
+- "Analyze last 5 PRs" → Custom limit
 
 ## Phase 2: Analysis (Parallel)
 
-**CRITICAL**: Analyze **ALL sources** for **EVERY PR**, regardless of CI status.
+**⭐ PRIORITY ENFORCEMENT** - Analyze in this order:
 
-For each PR, launch parallel subagents:
+### Priority 1: Human Review Comments (PRIMARY SOURCE)
+**Why first**: Human reviewers have already looked at the code and identified real issues
+- **Subagent B** - Review comments (CRITICAL: Fetch BOTH endpoints)
+- These are KNOWN issues that MUST be fixed
+- Takes precedence over automated checks
 
-**Subagent A - CI Failures**: Test failures, build errors, lint issues
+### Priority 2: CI Failures (SECONDARY SOURCE)
+**Why second**: CI caught issues in automated testing environment
+- **Subagent A** - CI failures
+- Represents issues that will block merge
+- More reliable than static analysis
+
+### Priority 3: Code Quality Issues (TERTIARY SOURCE)
+**Why third**: These are potential improvements, not blocking issues
+- **Subagents C-E** - Code quality (security, performance, architecture)
+- Independent analysis, may overlap with human reviews
+- Use to catch issues humans missed
+
+**Why this order matters**:
+- Human reviewers > Automated CI > Static analysis
+- Fixes human feedback first (reduces review churn)
+- Respects reviewer time (they already invested effort)
+- Prevents fixing low-priority issues while ignoring reviewer requests
+
+---
+
+### Subagent A - CI Failures (SECONDARY)
+Test failures, build errors, lint issues
 - Even if CI is green, check for warnings or flaky tests
 
-**Subagent B - Review Comments** (**CRITICAL: Fetch BOTH endpoints**):
+### Subagent B - Review Comments (PRIMARY ⭐)
 
 **MANDATORY: Fetch review summaries AND comment threads**:
 1. **Review summaries**: `gh pr view ${PR} --json reviews`
@@ -95,10 +170,33 @@ For each PR, launch parallel subagents:
    - Actual bug reports and issues to fix
    - Thread replies and resolution status
 
-**Parse for**:
+**Bot filtering** (MUST exclude automated bot comments):
+```bash
+# Filter out bot comments - they're automated, not human review
+BOT_USERS=(
+  "copilot-pull-request-reviewer"
+  "blacksmith-sh"
+  "dependabot"
+  "dependabot[bot]"
+  "github-actions[bot]"
+)
+
+# Extract only human comments
+HUMAN_COMMENTS=$(jq --argjson bots "$(printf '%s\n' "${BOT_USERS[@]}" | jq -R . | jq -s .)" \
+  'map(select(.user.login as $user | $bots | index($user) | not))' \
+  /tmp/review-comments.json)
+```
+
+**Why filter bots**:
+- Bot comments are automated suggestions, not human review feedback
+- Human review takes priority (PRIMARY source)
+- Reduces noise in analysis
+- Focuses on what humans care about
+
+**Parse for** (human comments only):
 - **First**: Filter out resolved threads (`resolved: true`) - already addressed
+- **Second**: Filter out bot comments (see bot list above)
 - Human reviews (requested changes, suggestions, questions)
-- **Bot/AI reviews** (GitHub Copilot, code analysis bots, security scanners)
 - Actionable items: "should", "must", "concern", "todo", "recommend", "bug", "leak"
 - Unresolved comment threads
 
@@ -106,8 +204,10 @@ For each PR, launch parallel subagents:
 
 See [REVIEW-COMMENTS.md](REVIEW-COMMENTS.md) for complete enforcement details.
 
-**Subagent C-E - Code Quality**: Security, performance, architecture issues
+### Subagents C-E - Code Quality (TERTIARY)
+Security, performance, architecture issues
 - Independent of CI and review status
+- May find issues humans missed
 
 **Subagent F - Ticket Alignment** (if ticket integration enabled):
 - Extract ticket IDs from PR title/body/branch
@@ -186,7 +286,41 @@ Aggregate findings from Phase 2, deduplicate, sort by severity (Critical → Hig
 
 ## Phase 4: User Interaction
 
-Present report combining all sources (CI + Review + Code + Ticket + Conflicts), ask what to fix:
+**"Already Responded" Detection** (prevents re-surfacing resolved issues):
+
+```bash
+# Detect if user already responded to review comments
+# A comment thread with user replies is lower priority than unresolved threads
+
+AUTHOR=$(gh pr view ${PR_NUMBER} --json author -q .author.login)
+
+# For each review comment, check if author replied
+for comment_id in $(jq -r '.[].id' /tmp/review-comments.json); do
+  # Check if any reply has in_reply_to_id = comment_id AND user = author
+  HAS_RESPONSE=$(jq --arg id "$comment_id" --arg author "$AUTHOR" \
+    'map(select(.in_reply_to_id == ($id | tonumber) and .user.login == $author)) | length > 0' \
+    /tmp/review-comments.json)
+
+  if [ "$HAS_RESPONSE" = "true" ]; then
+    # User already responded - lower priority
+    echo "  💬 Responded: Comment $comment_id"
+  else
+    # No response yet - high priority
+    echo "  ⚠️  Unresolved: Comment $comment_id"
+  fi
+done
+```
+
+**Status indicators**:
+- **⚠️ Unresolved**: No response from PR author (HIGH PRIORITY)
+- **💬 Responded**: PR author replied but not marked resolved (MEDIUM PRIORITY)
+- **✅ Resolved**: Thread marked resolved (SKIP - already addressed)
+
+---
+
+**Report Format** (with priority structure):
+
+Present report combining all sources (CI + Review + Code + Ticket + Conflicts) with CLEAR priority structure (PRIMARY > SECONDARY > TERTIARY):
 ```
 PR #123: Fix authentication
 
@@ -212,21 +346,41 @@ Ticket Alignment (PROJ-456):
 ├─ ⚠️ Missing: Password reset link (acceptance criteria)
 └─ 🚨 Scope divergence: Analytics code (not in ticket)
 
-Critical (2):
-  [CI] TestAuthHandler failure (FRESH) - Expected 2 elements, got 0
-  [Review] Missing auth check per @reviewer
+═══════════════════════════════════════════════════════════════
+🔴 PRIORITY 1: Unresolved Human Review Comments (PRIMARY)
+═══════════════════════════════════════════════════════════════
+  1. ⚠️  [CRITICAL] Missing auth check in login.go:45 (@reviewer)
+     "This endpoint bypasses authentication - security issue"
+     Status: UNRESOLVED (no response from author)
 
-High (3):
-  [CI] TestSessionCleanup (FRESH) - Race condition in session handler
-  [Review] Unvalidated user input per @security-team
-  [Code] Missing error handling in payment flow
+  2. ⚠️  [HIGH] Unvalidated user input in handler.go:23 (@security-team)
+     "Need input sanitization to prevent XSS"
+     Status: UNRESOLVED (no response from author)
+
+  3. 💬 [MEDIUM] Error handling improvement in auth.go:67 (@reviewer)
+     "Should return specific error codes"
+     Status: RESPONDED (author replied: "Will fix in next commit")
+
+═══════════════════════════════════════════════════════════════
+🟡 PRIORITY 2: CI Issues (SECONDARY)
+═══════════════════════════════════════════════════════════════
+  4. [CRITICAL] TestAuthHandler (FRESH) - Expected 2 elements, got 0
+  5. [HIGH] TestSessionCleanup (FRESH) - Race condition in session handler
+
+═══════════════════════════════════════════════════════════════
+🟢 PRIORITY 3: Additional Code Quality Issues (TERTIARY)
+═══════════════════════════════════════════════════════════════
+  6. [HIGH] Missing error handling in payment flow (security review)
+  7. [MEDIUM] Performance: N+1 query in user lookup (performance review)
 
 Recommendation:
 - Resolve conflicts first (blocks merge)
+- FIX PRIORITY 1 FIRST: Human reviewers waiting on these fixes
+- Then Priority 2 (CI) to unblock merge
+- Finally Priority 3 (code quality) if time permits
 - Split PR: Core auth (matches PROJ-456) + Analytics (new ticket)
-- CI changed since Phase 1 - using FRESH data
 
-Fix: 1) All Critical+High  2) Critical only  3) Skip
+Fix: 1) All priorities  2) Priority 1+2 only  3) Priority 1 only  4) Skip
 Conflicts: 1) Auto-resolve  2) Interactive  3) Skip
 ```
 

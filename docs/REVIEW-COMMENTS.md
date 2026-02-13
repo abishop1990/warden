@@ -199,13 +199,115 @@ jq -r '.[] |
   /tmp/review-comments.json
 ```
 
-### Step 3: Identify Actionable Items
+### Step 3: Filter Out Bot Comments (MANDATORY)
 
-**From comment threads**, extract:
+**Bot filtering** - MUST exclude automated bot comments before analysis:
+
+```bash
+# List of known bot users to exclude
+BOT_USERS=(
+  "copilot-pull-request-reviewer"
+  "blacksmith-sh"
+  "dependabot"
+  "dependabot[bot]"
+  "github-actions[bot]"
+  "codecov[bot]"
+  "renovate[bot]"
+)
+
+# Filter out bot comments
+HUMAN_COMMENTS=$(jq --argjson bots "$(printf '%s\n' "${BOT_USERS[@]}" | jq -R . | jq -s .)" \
+  'map(select(.user.login as $user | $bots | index($user) | not))' \
+  /tmp/review-comments.json)
+```
+
+**Why filter bots**:
+- Bot comments are automated suggestions, not human review
+- Human review comments are PRIMARY source (highest priority)
+- Bots can generate noise (dependency updates, coverage reports, etc.)
+- Focusing on human feedback reduces review churn
+
+**Example**:
+```json
+// ❌ SKIP - Bot comment
+{
+  "user": { "login": "copilot-pull-request-reviewer" },
+  "body": "Consider using const instead of let"
+}
+
+// ✅ KEEP - Human comment
+{
+  "user": { "login": "senior-engineer" },
+  "body": "This loop causes data leaks - see line 123"
+}
+```
+
+### Step 4: Detect "Already Responded" Status
+
+**Check if PR author already responded to comments**:
+
+```bash
+# Get PR author
+AUTHOR=$(gh pr view ${PR_NUMBER} --json author -q .author.login)
+
+# For each comment thread, detect response status
+jq --arg author "$AUTHOR" '
+  # Group by original comment (comments with in_reply_to_id = null)
+  group_by(select(.in_reply_to_id == null) | .id) |
+  map({
+    comment_id: .[0].id,
+    original_comment: .[0].body,
+    reviewer: .[0].user.login,
+    has_author_response: (map(select(.user.login == $author)) | length > 0),
+    is_resolved: (.[0].resolved // false)
+  })
+' /tmp/review-comments.json
+```
+
+**Status indicators**:
+- **⚠️ Unresolved**: No response from PR author → **HIGH PRIORITY**
+  - Reviewer waiting for feedback
+  - Issue not acknowledged
+
+- **💬 Responded**: PR author replied but not marked resolved → **MEDIUM PRIORITY**
+  - Author acknowledged issue
+  - May be work-in-progress
+  - Lower priority than unresolved
+
+- **✅ Resolved**: Thread marked resolved → **SKIP**
+  - Issue already addressed
+  - Verified by reviewer
+  - No action needed
+
+**Example**:
+```bash
+Comment 1 (auth.go:45):
+  Reviewer: "Missing auth check"
+  Status: ⚠️  UNRESOLVED (no author response)
+  Priority: HIGH - Fix first
+
+Comment 2 (handler.go:23):
+  Reviewer: "Need input validation"
+  Author: "Good catch, will fix"
+  Status: 💬 RESPONDED (not yet resolved)
+  Priority: MEDIUM - Author working on it
+
+Comment 3 (login.go:67):
+  Reviewer: "Typo in comment"
+  Author: "Fixed"
+  Status: ✅ RESOLVED
+  Priority: SKIP - Already done
+```
+
+### Step 5: Identify Actionable Items
+
+**From comment threads** (after filtering bots and resolved threads):
 - **First**: Filter out resolved threads (`resolved: true` in API response)
+- **Second**: Filter out bot comments (see Step 3)
+- **Third**: Check response status (see Step 4)
 - Keywords: "should", "must", "need to", "please", "concern", "issue", "bug", "leak"
-- Unresolved threads (no resolution comment)
-- Blocking issues (author hasn't responded)
+- Prioritize unresolved threads (⚠️) over responded threads (💬)
+- Blocking issues (author hasn't responded) are highest priority
 
 **Resolved thread handling**:
 ```bash
@@ -213,7 +315,7 @@ jq -r '.[] |
 ACTIONABLE=$(jq -r 'map(select(.resolved != true))' /tmp/review-comments.json)
 ```
 
-### Step 4: Report Findings
+### Step 6: Report Findings
 
 ```
 Review Analysis for PR #3875:
@@ -254,10 +356,27 @@ if [ ! -f /tmp/review-comments.json ]; then
 fi
 ```
 
-### Rule 2: MUST parse comment threads for specific feedback
+### Rule 2: MUST filter out bot comments
+```bash
+# Bot filtering - exclude automated comments
+BOT_USERS='["copilot-pull-request-reviewer","blacksmith-sh","dependabot","dependabot[bot]","github-actions[bot]"]'
+
+HUMAN_COMMENTS=$(jq --argjson bots "$BOT_USERS" \
+  'map(select(.user.login as $user | $bots | index($user) | not))' \
+  /tmp/review-comments.json)
+
+if [ "$(echo "$HUMAN_COMMENTS" | jq 'length')" -eq 0 ]; then
+  echo "ℹ️  No human review comments (only bot comments found)"
+else
+  echo "✅ Found $(echo "$HUMAN_COMMENTS" | jq 'length') human review comments"
+fi
+```
+
+### Rule 3: MUST parse comment threads for specific feedback
 ```bash
 # Don't just check if reviews exist - extract actual comments
-ACTIONABLE=$(jq -r '.[] | select(.body | test("should|must|need|concern|issue|bug|leak"; "i")) | .body' /tmp/review-comments.json)
+# Use human comments only (after bot filtering)
+ACTIONABLE=$(echo "$HUMAN_COMMENTS" | jq -r '.[] | select(.body | test("should|must|need|concern|issue|bug|leak"; "i")) | .body')
 
 if [ -n "$ACTIONABLE" ]; then
   echo "✅ Found actionable review comments"
@@ -266,20 +385,51 @@ else
 fi
 ```
 
-### Rule 3: MUST report unresolved threads
+### Rule 5: MUST detect response status
 ```bash
-# Thread is unresolved if it has no replies from PR author
+# Detect if PR author responded to each comment thread
 AUTHOR=$(gh pr view ${PR_NUMBER} --json author -q .author.login)
-UNRESOLVED=$(jq --arg author "$AUTHOR" -r '
-  group_by(.path, .line) |
-  map(select(
-    (.[0].user.login != $author) and
-    (map(.user.login) | index($author) == null)
-  )) |
-  .[]' /tmp/review-comments.json)
+
+# Categorize comments by response status
+echo "$HUMAN_COMMENTS" | jq --arg author "$AUTHOR" '
+  group_by(.path, .line // .original_position) |
+  map({
+    file: .[0].path,
+    line: (.[0].line // .[0].original_position),
+    original_comment: .[0].body,
+    reviewer: .[0].user.login,
+    has_author_response: (map(select(.user.login == $author and .in_reply_to_id != null)) | length > 0),
+    is_resolved: (.[0].resolved // false)
+  }) |
+  map(
+    if .is_resolved then
+      . + {status: "✅ RESOLVED", priority: "SKIP"}
+    elif .has_author_response then
+      . + {status: "💬 RESPONDED", priority: "MEDIUM"}
+    else
+      . + {status: "⚠️  UNRESOLVED", priority: "HIGH"}
+    end
+  )
+'
 ```
 
-### Rule 4: MUST ignore resolved threads
+### Rule 6: MUST report unresolved threads first
+```bash
+# Prioritize unresolved threads (no author response)
+UNRESOLVED=$(echo "$HUMAN_COMMENTS" | jq --arg author "$AUTHOR" -r '
+  group_by(.path, .line // .original_position) |
+  map(select(
+    # Not resolved
+    (.[0].resolved // false) == false and
+    # No response from author
+    (map(select(.user.login == $author and .in_reply_to_id != null)) | length == 0)
+  )) |
+  .[]')
+
+echo "High Priority (Unresolved): $(echo "$UNRESOLVED" | jq -s 'length')"
+```
+
+### Rule 7: MUST ignore resolved threads
 ```bash
 # If a review comment thread is marked as resolved, safely ignore all replies in that thread
 # GitHub API returns "resolved" field for review comments (v3 API)
