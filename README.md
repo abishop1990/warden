@@ -1,6 +1,6 @@
-# Warden - PR Review and Fix
+# Warden - Automated PR Pre-Review Validation
 
-Cross-platform AI skill for comprehensive automated PR review and fixes.
+Automated PR validation that catches and fixes issues before human review, ensuring every PR is review-ready.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/abishop1990/warden)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -8,7 +8,7 @@ Cross-platform AI skill for comprehensive automated PR review and fixes.
 
 ## Overview
 
-Warden is an AI coding assistant skill that reviews **existing Pull Requests**, identifies issues (CI failures, review comments, code quality problems), and automatically fixes them by pushing validated changes back to the PR.
+Warden is an AI coding assistant that validates **Pull Requests before human review**, identifying and auto-fixing issues (CI failures, review comments, code quality problems) to reduce review churn and ensure every PR is review-ready.
 
 **How it works**:
 1. Developer creates PR (may have CI failures, review feedback, code issues)
@@ -25,7 +25,8 @@ Works across multiple AI platforms:
 - **Claude Code** - Anthropic's AI pair programmer
 - **GitHub Copilot** - GitHub's AI assistant
 - **Cursor** - AI-first code editor
-- **Codex** - And other AI coding tools
+- **Codex** - OpenAI's code model
+- And other AI coding assistants
 
 ## Features
 

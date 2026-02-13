@@ -1,8 +1,8 @@
 {
   "name": "warden",
   "version": "1.2.0",
-  "displayName": "Warden - PR Review and Fix",
-  "description": "Cross-platform AI skill for comprehensive automated PR review and fixes",
+  "displayName": "Warden - Automated PR Pre-Review Validation",
+  "description": "Automated PR validation that catches and fixes issues before human review, ensuring every PR is review-ready",
   "type": "skill",
   "platforms": {
     "claude-code": {
@@ -26,12 +26,13 @@
   "repository": "https://github.com/abishop1990/warden",
   "license": "MIT",
   "keywords": [
-    "pr-review",
+    "pr-validation",
+    "pre-review",
     "code-quality",
     "ci-cd",
     "automated-fixes",
-    "security",
-    "performance",
+    "review-churn-reduction",
+    "quality-gate",
     "testing"
   ],
   "capabilities": [
