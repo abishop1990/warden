@@ -175,40 +175,14 @@ done
 
 **Enforcement**: Phase 4 report MUST include fresh CI data and flag changed statuses.
 
-**Step 1.5: Merge Conflict Detection (NEW)**
+**Step 1.5: Merge Conflict Detection**
 
-**Detect merge conflicts** when checking out PR branches:
+Detect merge conflicts when checking out PR branches. If conflicts found, save details for Phase 4 reporting.
 
-```bash
-for PR_NUM in ${SELECTED_PRS[@]}; do
-  # Checkout PR branch in temp workspace
-  cd "/tmp/warden-pr-${PR_NUM}"
-  gh pr checkout ${PR_NUM}
-
-  # Detect conflicts
-  CONFLICTS=$(git diff --name-only --diff-filter=U)
-
-  if [ -n "$CONFLICTS" ]; then
-    echo "⚠️  Merge conflicts detected in PR #${PR_NUM}"
-
-    # Save conflict details for Phase 4
-    echo "$CONFLICTS" > "/tmp/warden-pr-${PR_NUM}-conflicts.txt"
-
-    # Extract conflict content
-    for file in $CONFLICTS; do
-      git diff "$file" >> "/tmp/warden-pr-${PR_NUM}-conflict-details.txt"
-    done
-
-    # Flag for reporting
-    HAS_CONFLICTS[$PR_NUM]=true
-  fi
-done
-```
-
-**Why this matters**:
-- Conflicts block merging - must be addressed
-- Presents resolution options to user (auto, interactive, skip)
-- Avoids wasting time on PRs that can't merge
+**Resolution options presented to user**:
+- Auto-resolve: AI attempts resolution (dependencies, formatting)
+- Interactive: Agent guides through each conflict
+- Skip: Continue with other fixes, user handles manually
 
 See [MERGE-CONFLICT-HANDLING.md](MERGE-CONFLICT-HANDLING.md) for complete details.
 
