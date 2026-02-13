@@ -86,7 +86,7 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed cleanup instructions.
 8-phase workflow for PR review and automated fixes:
 
 0. **Command Discovery (MANDATORY)** - Discover and save validation commands to artifact - BLOCKING for Phase 6
-1. **PR Discovery** - Batch API call to list PRs, save initial CI state, auto-select top 10 by priority if >10 found
+1. **PR Discovery** - Batch API call to list PRs, save initial CI state, analyze ALL by default (user can specify subset)
 2. **Analysis** - Launch ALL subagents for ALL PRs analyzing ALL sources (CI + Review + Code + Ticket) regardless of CI status
 3. **Validation** - Verify PR branch integrity, run build to check compilation
 4. **Planning** - **CI Re-verification (Gap #16 fix): Re-check CI, compare with Phase 1, flag changes** → Aggregate findings, deduplicate, prioritize by severity, flag escalations

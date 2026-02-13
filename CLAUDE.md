@@ -197,10 +197,9 @@ Claude Code provides these specialized agents via the Task tool:
 - **Common mistake**: Using `git branch --list` - this lists branches, not PRs!
 
 **Scope Selection:**
-- If ≤10 PRs: Analyze all
-- If >10 PRs: Auto-select top 10 by priority and INFORM user
+- **Default**: Analyze ALL open PRs (no limit)
 - **Priority**: Failing CI > Review comments > Most recently updated
-- **User can override**: "analyze all PRs", "only PR #123", "analyze PR #123, #125"
+- **User can specify**: "only PR #123", "analyze PR #123, #125", "last 5 PRs"
 
 **Default Configuration**: Standard review depth, Affected test strategy, Balanced fix strategy (see AGENTS.md for details and overrides).
 
