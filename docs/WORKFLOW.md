@@ -269,6 +269,17 @@ done
 
 **Enforcement**: Phase 4 report MUST include fresh CI data and flag changed statuses.
 
+**Step 1.5: Merge Conflict Detection**
+
+Detect merge conflicts when checking out PR branches. If conflicts found, save details for Phase 4 reporting.
+
+**Resolution options presented to user**:
+- Auto-resolve: AI attempts resolution (dependencies, formatting)
+- Interactive: Agent guides through each conflict
+- Skip: Continue with other fixes, user handles manually
+
+See [MERGE-CONFLICT-HANDLING.md](MERGE-CONFLICT-HANDLING.md) for complete details.
+
 **Step 2: Aggregate Findings**
 
 Aggregate findings from Phase 2, deduplicate, sort by severity (Critical → High → Medium → Low)
@@ -309,9 +320,20 @@ done
 
 **Report Format** (with priority structure):
 
-Present report combining all sources with CLEAR priority structure (PRIMARY > SECONDARY > TERTIARY):
+Present report combining all sources (CI + Review + Code + Ticket + Conflicts) with CLEAR priority structure (PRIMARY > SECONDARY > TERTIARY):
 ```
 PR #123: Fix authentication
+
+⚠️  MERGE CONFLICTS (2 files):
+├─ src/auth/login.ts (lines 45-52)
+│  - Conflict: OAuth2 vs JWT implementation
+└─ package.json (lines 15-18)
+   - Conflict: express@4.18.2 vs express@4.19.0
+
+Conflict resolution options:
+1. Auto-resolve: AI attempts resolution
+2. Interactive: Guide me through each conflict
+3. Skip: I'll handle manually (continue with other fixes)
 
 ⚠️  CI Status Changed (Gap #16 detection):
 ├─ Phase 1: 0 failures (passing)
@@ -352,12 +374,14 @@ Ticket Alignment (PROJ-456):
   7. [MEDIUM] Performance: N+1 query in user lookup (performance review)
 
 Recommendation:
+- Resolve conflicts first (blocks merge)
 - FIX PRIORITY 1 FIRST: Human reviewers waiting on these fixes
 - Then Priority 2 (CI) to unblock merge
 - Finally Priority 3 (code quality) if time permits
 - Split PR: Core auth (matches PROJ-456) + Analytics (new ticket)
 
 Fix: 1) All priorities  2) Priority 1+2 only  3) Priority 1 only  4) Skip
+Conflicts: 1) Auto-resolve  2) Interactive  3) Skip
 ```
 
 ## Phase 5: Execution
