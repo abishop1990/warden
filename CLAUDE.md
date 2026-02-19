@@ -527,7 +527,7 @@ See README.md for complete language-specific command reference.
 11. **Clean up workspaces** after each PR (unless `--keep-workspace`)
 12. **Respect fix limits** - honor `--max-fixes-per-tier`
 13. **Flag based on strategy** - conservative flags more, aggressive flags less
-14. **Comment on PR** if `--comment-on-pr` is set
+14. **Never comment on PR by default** - only post PR comments if user explicitly requests it or passes `--comment-on-pr`
 15. **Respect parallelization limits** - `--max-parallel-prs` batching
 16. **Apply file filters** - honor `--ignore-paths`, `--focus-paths`, `--max-file-size`
 17. **Load configuration** from `~/.warden/config.yml` or `.warden/config.yml` if present

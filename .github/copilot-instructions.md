@@ -68,7 +68,7 @@ cp -r ~/warden/docs /path/to/project/docs/
 - `--reviewers security,performance,architecture` - Custom reviewers
 - `--test-strategy none|affected|full|smart` - Test approach
 - `--fix-strategy conservative|balanced|aggressive` - Fix aggressiveness
-- `--comment-on-pr` - Post findings to PR
+- `--comment-on-pr` - Post findings to PR (opt-in, disabled by default)
 - `--dry-run` - Preview without fixing
 
 See [PARAMETERS.md](../docs/PARAMETERS.md) for complete parameter reference.

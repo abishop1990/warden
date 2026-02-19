@@ -35,7 +35,7 @@ Warden is a cross-platform AI coding assistant skill for comprehensive automated
 - **5 specialized reviewers** (security, performance, architecture, maintainability, testing)
 - **Flexible test strategies** (none/affected/full/smart)
 - **Incremental fix validation** by severity tier
-- **PR integration** (comment on PRs, update existing comments)
+- **PR integration** (opt-in comment on PRs via `--comment-on-pr`, disabled by default)
 - **External integrations** (Slack, Jira, webhooks)
 - **Platform-specific optimizations** for each AI assistant
 - **1.2-1.7x faster** than sequential (configuration-dependent)
