@@ -107,7 +107,7 @@ See [README.md](README.md) for complete documentation.
 6. **Incremental fixes** - By severity tier
 7. **Never modify user's working directory**
 8. **Respect configuration** - All 40+ parameters
-9. **Comment on PR** - If `--comment-on-pr` enabled
+9. **Never comment on PR by default** - only post PR comments if user explicitly requests it or passes `--comment-on-pr`
 10. **Apply file filters** - Honor `--ignore-paths` and `--focus-paths`
 
 ## Subagent Selection
